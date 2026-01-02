@@ -1,13 +1,13 @@
 
 import React, { useState, useCallback } from 'react';
-import { 
-  HairLossCategory, 
+import {
+  HairLossCategory,
   HairType,
   Ethnicity,
-  HairLossArea, 
-  GraftDensity, 
-  VisualizationParams, 
-  VisualizationResult 
+  HairLossArea,
+  GraftDensity,
+  VisualizationParams,
+  VisualizationResult
 } from './types';
 import ControlPanel from './components/ControlPanel';
 import ImageDisplay from './components/ImageDisplay';
@@ -38,9 +38,9 @@ const App: React.FC = () => {
   };
 
   const handleSaveMask = (mask: string) => {
-    setParams(prev => ({ 
-      ...prev, 
-      mask, 
+    setParams(prev => ({
+      ...prev,
+      mask,
       areas: prev.areas.includes(HairLossArea.CUSTOM) ? prev.areas : [...prev.areas, HairLossArea.CUSTOM]
     }));
   };
@@ -76,14 +76,14 @@ const App: React.FC = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Header />
-      
+
       <main className="flex-grow container mx-auto px-4 py-8 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
           {/* Left Column: Controls */}
           <div className="lg:col-span-4 space-y-6">
-            <ControlPanel 
-              params={params} 
-              setParams={setParams} 
+            <ControlPanel
+              params={params}
+              setParams={setParams}
               onUpload={handleImageUpload}
               onRun={handleRunSimulation}
               isProcessing={isProcessing}
@@ -95,9 +95,9 @@ const App: React.FC = () => {
 
           {/* Right Column: Visualization */}
           <div className="lg:col-span-8">
-            <ImageDisplay 
-              beforeImage={patientImage} 
-              result={result} 
+            <ImageDisplay
+              beforeImage={patientImage}
+              result={result}
               isProcessing={isProcessing}
               error={error}
               isMapping={isMapping}
