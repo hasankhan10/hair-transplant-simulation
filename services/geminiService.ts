@@ -118,7 +118,7 @@ const compositeStrictResult = async (
 
     if (tempCtx) {
       // 6px feathering for a refined blend that hides the "cut" line
-      tempCtx.filter = 'blur(6px)';
+      tempCtx.filter = 'blur(12px)';
       tempCtx.drawImage(maskCanvas, 0, 0);
       tempCtx.filter = 'none'; // Reset filter
 
@@ -158,32 +158,27 @@ export const generateHairVisualization = async (
 
   const { data: base64Data, mimeType } = getBase64Data(aiInputImage);
 
-  const prompt = `ROLE: MASTER HAIR TRANSPLANT SURGEON & VFX ARTIST.
-The image contains a BRIGHT GREEN (CHROMA KEY) MASK. This is the restoration zone.
+  const prompt = `ROLE: MASTER HAIR TRANSPLANT SURGEON.
+The image contains a BRIGHT GREEN (CHROMA KEY) MASK. This green area marks the bald zone that needs immediate restoration.
 
-MANDATORY REALISM PROTOCOLS:
+YOUR MISSION:
+1. ANALYZE EXISTING HAIR: Look at the hair OUTSIDE the green zone. Note the:
+   - "Salt & Pepper" Gray Ratio (Crucial for realism).
+   - Strand Thickness (Fine vs Coarse).
+   - Curl Pattern (Straight vs Wavy).
+   - Light Diffusion (Soft vs Hard).
 
-1. 🔍 TEXTURE & GRAIN MATCHING (CRITICAL):
-   - You must NOT generate "smooth" or "cartoonish" hair.
-   - Analyze the "Digital Noise" and "ISO Grain" of the original photo.
-   - The new hair must have the EXACT SAME pixel-level grittiness and sharpness as the ears/neck.
+2. PERFORM THE TRANSPLANT:
+   - REPLACE the Green Zone entirely with new hair that matches the analysis above.
+   - The new hair must be INDISTINGUISHABLE from the existing hair.
+   
+3. REALISM RULES:
+   - NO "WIG" LOOK: Randomize the direction slightly. Real hair is messy.
+   - NO GREEN REFLECTIONS: Ensure the final hair has zero green tint.
+   - NATURAL DENSITY: ${densityDescription[params.density]}.
+   - SEAMLESS BLEND: The transition from the real hair to the new hair must be invisible.
 
-2. 🧬 BIOLOGICAL CLONING:
-   - "Copy-Paste" the user's existing hair DNA.
-   - If they have frizzy side hair, the top MUST be frizzy.
-   - If they have 40% gray hair, the top MUST be 40% gray. Do not make it darker.
-
-3. 🌪️ STRUCTURAL CHAOS (NO WIGS):
-   - Real hair is imperfect. Generate "flyaways," "crossing strands," and "messy angles."
-   - Avoid perfect geometric patterns. Make it look organic and slightly irregular.
-
-4. 💡 LIGHTING PHYSICS:
-   - Calculate the light source based on the shine on the patient's forehead or nose.
-   - Apply precise highlights and shadows to the new hair follicles to match this direction.
-
-5. DENSITY & COVERAGE: ${densityDescription[params.density]}.
-
-OUTPUT: A result where the "Green Zone" has vanished, replaced by hair that defies detection as a simulation.`;
+OUTPUT: A photorealistic "After" photo. The green is gone. The hair is restored.`;
   const ai = new GoogleGenAI({ apiKey });
 
   const response = await ai.models.generateContent({
