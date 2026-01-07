@@ -41,19 +41,39 @@ const createAIComposition = async (originalBase64: string, maskBase64: string): 
   if (!ctx) return originalBase64;
 
   ctx.drawImage(img, 0, 0);
-  // Draw the mask at 100% opacity for the AI to see it as a "Command Zone"
+
+  // GREEN SCREEN STRATEGY (CHROMA KEY):
+  // We use pure Neon Green (#00FF00) which never appears in human skin/hair.
+  // This tells the AI: "This is artificial. Replace completely."
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#00FF00';
   ctx.globalAlpha = 1.0;
-  ctx.drawImage(mask, 0, 0, canvas.width, canvas.height);
+
+  // We need to draw the mask shape, but fill it with green.
+  // 1. Draw the user's mask to an offscreen canvas
+  const maskCanvas = document.createElement('canvas');
+  maskCanvas.width = canvas.width;
+  maskCanvas.height = canvas.height;
+  const maskCtx = maskCanvas.getContext('2d');
+  if (maskCtx) {
+    maskCtx.drawImage(mask, 0, 0, canvas.width, canvas.height);
+
+    // 2. Composite "Source In" to keep only the mask shape but make it green
+    maskCtx.globalCompositeOperation = 'source-in';
+    maskCtx.fillStyle = '#00FF00';
+    maskCtx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 3. Draw the green mask onto the main image
+    ctx.drawImage(maskCanvas, 0, 0);
+  }
 
   return canvas.toDataURL('image/png');
 };
 
 /**
  * Strictly composites the AI result onto the original image using the mask.
- * This forces the AI output to exist ONLY where the user drew the mask.
  * 
- * UPDATED: Adds edge feathering/blurring to the mask to ensure the hair
- * blends naturally with the skin, avoiding the "hard sticker" look.
+ * UPDATED: Uses Deep Feathering (8px) to eliminate the "Photoshop Sticker" look.
  */
 const compositeStrictResult = async (
   originalBase64: string,
@@ -74,54 +94,43 @@ const compositeStrictResult = async (
 
     if (!ctx) return aiResultBase64;
 
-    // 1. Draw Background (Original Photo)
+    // 1. Draw Background
     ctx.drawImage(imgOriginal, 0, 0);
 
-    // 2. Prepare the Mask (Solidify + Soften)
-    // We create a separate canvas to process the mask before using it for clipping
+    // 2. Prepare Soft Mask
     const maskCanvas = document.createElement('canvas');
     maskCanvas.width = canvas.width;
     maskCanvas.height = canvas.height;
     const maskCtx = maskCanvas.getContext('2d');
 
     if (maskCtx) {
-      // A. Draw the user's raw mask
       maskCtx.drawImage(imgMask, 0, 0, canvas.width, canvas.height);
-
-      // B. "Solidify" the mask. 
-      // The user draws with opacity 0.85. We draw it over itself multiple times
-      // to ensure the core area is fully opaque (alpha=1.0) so hair isn't transparent.
       maskCtx.globalCompositeOperation = 'source-over';
       maskCtx.drawImage(imgMask, 0, 0, canvas.width, canvas.height);
       maskCtx.drawImage(imgMask, 0, 0, canvas.width, canvas.height);
     }
 
-    // 3. Cutout Logic with Feathering
+    // 3. Deep Feathered Blending
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = canvas.width;
     tempCanvas.height = canvas.height;
     const tempCtx = tempCanvas.getContext('2d');
 
     if (tempCtx) {
-      // A. Draw the processed mask WITH A BLUR
-      // Reduced to 1px for sharper, strand-level blending (avoids the 'fuzzy' look)
-      tempCtx.filter = 'blur(1px)';
+      // 6px feathering for a refined blend that hides the "cut" line
+      tempCtx.filter = 'blur(6px)';
       tempCtx.drawImage(maskCanvas, 0, 0);
       tempCtx.filter = 'none'; // Reset filter
 
-      // B. Composite Mode: Keep only pixels where mask exists
       tempCtx.globalCompositeOperation = 'source-in';
 
-      // C. Draw AI Result (stretched to fit canvas to avoid alignment issues)
       tempCtx.drawImage(imgAI, 0, 0, canvas.width, canvas.height);
 
-      // D. Draw the cut-out hair onto main canvas
       ctx.drawImage(tempCanvas, 0, 0);
     }
 
     return canvas.toDataURL('image/png');
   } catch (error) {
-    console.error("Composition Error - Returning raw AI result (Risk of leakage):", error);
     return aiResultBase64;
   }
 };
@@ -137,9 +146,9 @@ export const generateHairVisualization = async (
   if (!apiKey) throw new Error("API Key not found");
 
   const densityDescription = {
-    [GraftDensity.LOW]: "25 grafts/cm². Natural scalp visibility between follicles.",
-    [GraftDensity.MEDIUM]: "45 grafts/cm². Strong coverage with natural depth.",
-    [GraftDensity.HIGH]: "70+ grafts/cm². Dense packing, scalp completely obscured."
+    [GraftDensity.LOW]: "2,500 Grafts (Medium density, natural finish).",
+    [GraftDensity.MEDIUM]: "5,000 Grafts (High density, thick coverage).",
+    [GraftDensity.HIGH]: "8,000+ Grafts (MAXIMUM DENSITY PACKING - ZERO SCALP)."
   };
 
   // 1. Prepare the contextual image for the AI
@@ -149,22 +158,32 @@ export const generateHairVisualization = async (
 
   const { data: base64Data, mimeType } = getBase64Data(aiInputImage);
 
-  const prompt = `CRITICAL OBJECTIVE: RECONSTRUCT BIOLOGICAL HAIR.
-The patient image has a SOLID RED marked zone. You must replace this red area with 100% photorealistic, medically accurate hair follicles.
+  const prompt = `ROLE: MASTER HAIR TRANSPLANT SURGEON & VFX ARTIST.
+The image contains a BRIGHT GREEN (CHROMA KEY) MASK. This is the restoration zone.
 
-AUTONOMOUS DETECTION & BIOLOGICAL RULES (MANDATORY):
-1. PATIENT ANALYSIS: Automatically detect the patient's biological age, ethnicity, and unique hair characteristics (color, thickness, and natural "Salt & Pepper" gray/black mix) from IMAGE 1. 
-2. TEXTURE MATCHING: Replicate the exact hair texture (Straight, Wavy, Curly, or Coily) seen in the surrounding hair. The result must be a high-frequency digital construction, not a smooth edit.
-3. ROOT REALISM: Generate micro-shadows at the root of every hair strand. There must be "depth" between the hair and the scalp.
-4. ANATOMICAL FLOW: 
-   - Detect the head position and angle.
-   - If this is a CROWN shot, create a precise SPIRAL WHORL matching the existing rotation.
-   - If frontal, create a forward "leaping" hair direction.
-5. IRREGULARITY: Avoid perfect symmetry. Add natural flyaways and slightly messy strand directions to avoid the "wig" or "Photoshop" look.
-6. DENSITY: ${densityDescription[params.density]}.
-7. DELETE RED: Ensure not a single pixel of red remains. Replace it with 100% hair and scalp detail.
+MANDATORY REALISM PROTOCOLS:
 
-STRICT RULE: The final result must be indistinguishable from a real post-transplant photograph. The AI must adapt perfectly to THIS specific person's DNA and hair pattern.`;
+1. 🔍 TEXTURE & GRAIN MATCHING (CRITICAL):
+   - You must NOT generate "smooth" or "cartoonish" hair.
+   - Analyze the "Digital Noise" and "ISO Grain" of the original photo.
+   - The new hair must have the EXACT SAME pixel-level grittiness and sharpness as the ears/neck.
+
+2. 🧬 BIOLOGICAL CLONING:
+   - "Copy-Paste" the user's existing hair DNA.
+   - If they have frizzy side hair, the top MUST be frizzy.
+   - If they have 40% gray hair, the top MUST be 40% gray. Do not make it darker.
+
+3. 🌪️ STRUCTURAL CHAOS (NO WIGS):
+   - Real hair is imperfect. Generate "flyaways," "crossing strands," and "messy angles."
+   - Avoid perfect geometric patterns. Make it look organic and slightly irregular.
+
+4. 💡 LIGHTING PHYSICS:
+   - Calculate the light source based on the shine on the patient's forehead or nose.
+   - Apply precise highlights and shadows to the new hair follicles to match this direction.
+
+5. DENSITY & COVERAGE: ${densityDescription[params.density]}.
+
+OUTPUT: A result where the "Green Zone" has vanished, replaced by hair that defies detection as a simulation.`;
   const ai = new GoogleGenAI({ apiKey });
 
   const response = await ai.models.generateContent({
