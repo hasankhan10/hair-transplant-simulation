@@ -40,11 +40,6 @@ export enum GraftDensity {
 }
 
 export interface VisualizationParams {
-  category: HairLossCategory;
-  hairType: HairType;
-  ethnicity: Ethnicity;
-  age: string;
-  areas: HairLossArea[];
   density: GraftDensity;
   mask?: string; // Base64 of the surgical marking mask
 }

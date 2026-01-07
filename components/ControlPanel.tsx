@@ -13,15 +13,15 @@ interface ControlPanelProps {
   hasImage: boolean;
 }
 
-const ControlPanel: React.FC<ControlPanelProps> = ({ 
-  params, 
-  setParams, 
-  onUpload, 
-  onRun, 
+const ControlPanel: React.FC<ControlPanelProps> = ({
+  params,
+  setParams,
+  onUpload,
+  onRun,
   onReset,
   onStartMapping,
-  isProcessing, 
-  hasImage 
+  isProcessing,
+  hasImage
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -44,7 +44,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
       };
       reader.readAsDataURL(file);
     }
-    
+
     // Reset the input value so the change event fires even if the same file is selected again
     if (e.target) {
       e.target.value = '';
@@ -77,7 +77,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         <div className="flex justify-between items-center mb-4">
           <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">1. Upload Photo</h3>
           {hasImage && (
-            <button 
+            <button
               onClick={onReset}
               className="text-[10px] text-red-600 hover:text-red-800 font-bold uppercase"
             >
@@ -86,7 +86,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
           )}
         </div>
         {!hasImage ? (
-          <button 
+          <button
             onClick={() => fileInputRef.current?.click()}
             className="w-full flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg py-12 px-4 transition hover:border-blue-400 hover:bg-blue-50 group"
           >
@@ -106,8 +106,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                 Photo Ready
               </span>
             </div>
-            
-            <button 
+
+            <button
               onClick={onStartMapping}
               className={`w-full flex items-center justify-center space-x-2 py-3 rounded-lg text-xs font-bold transition shadow-sm border-2 ${params.mask ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' : 'bg-slate-800 text-white border-slate-800 hover:bg-slate-900'}`}
             >
@@ -118,71 +118,17 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             </button>
           </div>
         )}
-        <input 
-          type="file" 
-          ref={fileInputRef} 
-          className="hidden" 
-          accept="image/png, image/jpeg, image/jpg, image/webp" 
-          onChange={handleFileChange} 
+        <input
+          type="file"
+          ref={fileInputRef}
+          className="hidden"
+          accept="image/png, image/jpeg, image/jpg, image/webp"
+          onChange={handleFileChange}
         />
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">2. Personalize</h3>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-tight">Age</label>
-            <input 
-              type="number" 
-              min="0"
-              max="120"
-              placeholder="Years"
-              className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none placeholder:text-slate-400"
-              value={params.age}
-              onChange={handleAgeChange}
-              onKeyDown={handleAgeKeyDown}
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-tight">Ethnicity</label>
-            <select 
-              className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-              value={params.ethnicity}
-              onChange={(e) => setParams({ ...params, ethnicity: e.target.value as Ethnicity })}
-            >
-              {Object.values(Ethnicity).map(eth => (
-                <option key={eth} value={eth}>{eth}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-tight">Hair Loss Type</label>
-          <select 
-            className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-            value={params.category}
-            onChange={(e) => setParams({ ...params, category: e.target.value as HairLossCategory })}
-          >
-            {Object.values(HairLossCategory).map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
-        </div>
-
-        <div>
-          <label className="block text-xs font-bold text-slate-700 mb-1 uppercase tracking-tight">Hair Texture</label>
-          <select 
-            className="w-full bg-white border border-slate-300 rounded-md px-3 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-blue-500 outline-none"
-            value={params.hairType}
-            onChange={(e) => setParams({ ...params, hairType: e.target.value as HairType })}
-          >
-            {Object.values(HairType).map(type => (
-              <option key={type} value={type}>{type}</option>
-            ))}
-          </select>
-        </div>
+        <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">2. Select Density</h3>
 
         <div>
           <div className="flex justify-between items-center mb-2">
@@ -191,7 +137,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               {densityLevels[currentDensityIndex].metric}
             </span>
           </div>
-          
+
           <div className="px-1 py-4">
             <input
               type="range"
@@ -204,8 +150,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             />
             <div className="flex justify-between mt-3">
               {densityLevels.map((level, idx) => (
-                <div 
-                  key={level.label} 
+                <div
+                  key={level.label}
                   className={`flex flex-col items-center flex-1 ${idx === 0 ? 'items-start' : idx === 2 ? 'items-end' : ''}`}
                 >
                   <div className={`w-0.5 h-1.5 rounded-full mb-1 ${currentDensityIndex === idx ? 'bg-blue-600' : 'bg-slate-300'}`} />
@@ -223,11 +169,10 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         <button
           onClick={onRun}
           disabled={!hasImage || isProcessing || !params.mask}
-          className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95 flex flex-col items-center justify-center ${
-            !hasImage || isProcessing || !params.mask
-              ? 'bg-slate-300 cursor-not-allowed shadow-none text-slate-500' 
+          className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95 flex flex-col items-center justify-center ${!hasImage || isProcessing || !params.mask
+              ? 'bg-slate-300 cursor-not-allowed shadow-none text-slate-500'
               : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5'
-          }`}
+            }`}
         >
           {isProcessing ? (
             <div className="flex items-center space-x-2">

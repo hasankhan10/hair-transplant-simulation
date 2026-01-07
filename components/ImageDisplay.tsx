@@ -14,12 +14,12 @@ interface ImageDisplayProps {
   currentMask: string | null;
 }
 
-const ImageDisplay: React.FC<ImageDisplayProps> = ({ 
-  beforeImage, 
-  result, 
-  isProcessing, 
-  error, 
-  isMapping, 
+const ImageDisplay: React.FC<ImageDisplayProps> = ({
+  beforeImage,
+  result,
+  isProcessing,
+  error,
+  isMapping,
   setIsMapping,
   onSaveMask,
   currentMask
@@ -46,8 +46,8 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
   return (
     <div className="bg-white rounded-2xl clinical-shadow border border-slate-100 flex flex-col min-h-[600px] overflow-hidden relative">
       {isMapping && beforeImage && (
-        <SurgicalCanvas 
-          image={beforeImage} 
+        <SurgicalCanvas
+          image={beforeImage}
           onSave={(mask) => {
             onSaveMask(mask);
             setIsMapping(false);
@@ -60,9 +60,8 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
       <div className="flex bg-slate-50 border-b border-slate-200">
         <button
           onClick={() => setActiveTab('comparison')}
-          className={`px-6 py-4 text-sm font-bold transition flex items-center ${
-            activeTab === 'comparison' ? 'text-blue-600 bg-white border-r border-slate-200' : 'text-slate-500 hover:text-slate-700'
-          }`}
+          className={`px-6 py-4 text-sm font-bold transition flex items-center ${activeTab === 'comparison' ? 'text-blue-600 bg-white border-r border-slate-200' : 'text-slate-500 hover:text-slate-700'
+            }`}
         >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
@@ -72,9 +71,8 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
         <button
           onClick={() => setActiveTab('result')}
           disabled={!result}
-          className={`px-6 py-4 text-sm font-bold transition flex items-center ${
-            activeTab === 'result' ? 'text-blue-600 bg-white border-x border-slate-200' : 'text-slate-500 hover:text-slate-700'
-          } ${!result && 'opacity-50 cursor-not-allowed'}`}
+          className={`px-6 py-4 text-sm font-bold transition flex items-center ${activeTab === 'result' ? 'text-blue-600 bg-white border-x border-slate-200' : 'text-slate-500 hover:text-slate-700'
+            } ${!result && 'opacity-50 cursor-not-allowed'}`}
         >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -84,9 +82,8 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('original')}
-          className={`px-6 py-4 text-sm font-bold transition flex items-center ${
-            activeTab === 'original' ? 'text-blue-600 bg-white border-l border-slate-200' : 'text-slate-500 hover:text-slate-700'
-          }`}
+          className={`px-6 py-4 text-sm font-bold transition flex items-center ${activeTab === 'original' ? 'text-blue-600 bg-white border-l border-slate-200' : 'text-slate-500 hover:text-slate-700'
+            }`}
         >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -124,7 +121,8 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
               <span className="absolute top-3 left-3 bg-black/60 text-white text-[10px] font-bold px-2 py-1 rounded-full uppercase tracking-widest z-10 backdrop-blur-md">Before</span>
               <div className="relative w-full h-full aspect-square">
                 <img src={beforeImage || ''} alt="Original" className="w-full h-full object-contain bg-slate-50" />
-                {currentMask && (
+                {/* Only show mask if there is NO result yet - clean comparison after run */}
+                {currentMask && !result && (
                   <img src={currentMask} alt="Mask Overlay" className="absolute inset-0 w-full h-full object-contain pointer-events-none opacity-60" />
                 )}
               </div>
@@ -145,11 +143,11 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
         {activeTab === 'result' && result && (
           <div className="w-full h-full flex items-center justify-center">
             <div className="relative max-w-2xl w-full bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
-               <span className="absolute top-4 left-4 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-widest z-10 shadow-lg">AI Preview</span>
-               <img src={result.afterImage} alt="Full Result" className="w-full object-contain bg-slate-50" />
-               <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-6 text-white">
-                  <p className="text-sm font-semibold italic">"AI-generated preview. Actual results may vary."</p>
-               </div>
+              <span className="absolute top-4 left-4 bg-blue-600 text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-widest z-10 shadow-lg">AI Preview</span>
+              <img src={result.afterImage} alt="Full Result" className="w-full object-contain bg-slate-50" />
+              <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-6 text-white">
+                <p className="text-sm font-semibold italic">"AI-generated preview. Actual results may vary."</p>
+              </div>
             </div>
           </div>
         )}
@@ -157,13 +155,14 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
         {activeTab === 'original' && (
           <div className="w-full h-full flex items-center justify-center">
             <div className="relative max-w-2xl w-full bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
-               <span className="absolute top-4 left-4 bg-black/60 text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-widest z-10 backdrop-blur-md">Original</span>
-               <div className="relative">
-                 <img src={beforeImage || ''} alt="Full Original" className="w-full object-contain bg-slate-50" />
-                 {currentMask && (
-                   <img src={currentMask} alt="Mask Overlay" className="absolute inset-0 w-full h-full object-contain pointer-events-none opacity-40" />
-                 )}
-               </div>
+              <span className="absolute top-4 left-4 bg-black/60 text-white text-xs font-bold px-3 py-1.5 rounded-full uppercase tracking-widest z-10 backdrop-blur-md">Original</span>
+              <div className="relative">
+                <img src={beforeImage || ''} alt="Full Original" className="w-full object-contain bg-slate-50" />
+                {/* Only show mask if there is NO result yet */}
+                {currentMask && !result && (
+                  <img src={currentMask} alt="Mask Overlay" className="absolute inset-0 w-full h-full object-contain pointer-events-none opacity-40" />
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -179,8 +178,8 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
           </div>
           {currentMask && (
             <div className="flex items-center text-red-600 font-bold">
-               <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
-               Area Selected
+              <span className="w-2 h-2 bg-red-500 rounded-full mr-1"></span>
+              Area Selected
             </div>
           )}
         </div>

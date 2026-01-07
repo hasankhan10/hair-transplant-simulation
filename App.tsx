@@ -22,11 +22,6 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const [params, setParams] = useState<VisualizationParams>({
-    category: HairLossCategory.MALE_PATTERN,
-    hairType: HairType.STRAIGHT,
-    ethnicity: Ethnicity.CAUCASIAN,
-    age: '',
-    areas: [], // Default to empty, mapping will add CUSTOM
     density: GraftDensity.MEDIUM
   });
 
@@ -34,14 +29,13 @@ const App: React.FC = () => {
     setPatientImage(imageData);
     setResult(null);
     setError(null);
-    setParams(prev => ({ ...prev, mask: undefined, areas: [] }));
+    setParams(prev => ({ ...prev, mask: undefined }));
   };
 
   const handleSaveMask = (mask: string) => {
     setParams(prev => ({
       ...prev,
-      mask,
-      areas: prev.areas.includes(HairLossArea.CUSTOM) ? prev.areas : [...prev.areas, HairLossArea.CUSTOM]
+      mask
     }));
   };
 
