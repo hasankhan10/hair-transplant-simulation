@@ -1,5 +1,5 @@
 
-import React, { useRef, useEffect, useState } from 'react';
+import React, { useRef, useEffect, useState, useCallback } from 'react';
 
 interface SurgicalCanvasProps {
   image: string;
@@ -11,27 +11,91 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [hasDrawn, setHasDrawn] = useState(false);
-  const [brushSize, setBrushSize] = useState(30); // Default slightly larger
+  const [brushSize, setBrushSize] = useState(30);
+
+  // History management for Undo/Redo
+  const [history, setHistory] = useState<ImageData[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
 
   // Helper to apply brush styles to the canvas context
-  const updateBrushStyle = () => {
+  const updateBrushStyle = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Increased opacity (0.85) to make the mask very clear for the AI, 
-    // while still allowing the user to see wrinkles underneath for placement.
     ctx.strokeStyle = 'rgba(220, 38, 38, 0.85)';
     ctx.lineWidth = brushSize;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
-  };
+  }, [brushSize]);
 
   // Re-apply styles whenever brush size changes
   useEffect(() => {
     updateBrushStyle();
-  }, [brushSize]);
+  }, [brushSize, updateBrushStyle]);
+
+  const saveToHistory = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const currentData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+
+    // If we're not at the end of the history (because of undos), clear the forward history
+    const newHistory = history.slice(0, historyIndex + 1);
+    newHistory.push(currentData);
+
+    // Keep history manageable (last 30 steps)
+    if (newHistory.length > 30) {
+      newHistory.shift();
+      setHistoryIndex(newHistory.length - 1);
+    } else {
+      setHistoryIndex(newHistory.length - 1);
+    }
+
+    setHistory(newHistory);
+    setHasDrawn(true);
+  }, [history, historyIndex]);
+
+  const undo = useCallback(() => {
+    if (historyIndex <= 0) {
+      if (historyIndex === 0) {
+        clear();
+        setHistoryIndex(-1);
+      }
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const prevIndex = historyIndex - 1;
+    const prevState = history[prevIndex];
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.putImageData(prevState, 0, 0);
+    setHistoryIndex(prevIndex);
+    updateBrushStyle(); // Restore styles after clearing
+  }, [history, historyIndex, updateBrushStyle]);
+
+  const redo = useCallback(() => {
+    if (historyIndex >= history.length - 1) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const nextIndex = historyIndex + 1;
+    const nextState = history[nextIndex];
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.putImageData(nextState, 0, 0);
+    setHistoryIndex(nextIndex);
+    updateBrushStyle(); // Restore styles after clearing
+  }, [history, historyIndex, updateBrushStyle]);
 
   const startDrawing = (e: React.MouseEvent | React.TouchEvent) => {
     setIsDrawing(true);
@@ -40,10 +104,7 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    // Safety check: ensure styles are correct before drawing starts
-    if (ctx.lineWidth !== brushSize) {
-      updateBrushStyle();
-    }
+    updateBrushStyle();
 
     const { x, y } = getCoordinates(e);
     ctx.beginPath();
@@ -52,11 +113,13 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
   };
 
   const stopDrawing = () => {
+    if (!isDrawing) return;
     setIsDrawing(false);
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext('2d');
-      ctx?.beginPath(); // Reset path so next stroke is separate
+      ctx?.beginPath();
+      saveToHistory();
     }
   };
 
@@ -86,7 +149,6 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
     const { x, y } = getCoordinates(e);
     ctx.lineTo(x, y);
     ctx.stroke();
-    setHasDrawn(true);
   };
 
   const clear = () => {
@@ -95,6 +157,9 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
     const ctx = canvas.getContext('2d');
     ctx?.clearRect(0, 0, canvas.width, canvas.height);
     setHasDrawn(false);
+    setHistory([]);
+    setHistoryIndex(-1);
+    updateBrushStyle();
   };
 
   const handleSave = () => {
@@ -103,24 +168,64 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
     onSave(canvas.toDataURL('image/png'));
   };
 
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z') {
+        if (e.shiftKey) {
+          redo();
+        } else {
+          undo();
+        }
+      } else if ((e.ctrlKey || e.metaKey) && e.key === 'y') {
+        redo();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [undo, redo]); // Use memoized functions as dependencies
+
   return (
     <div className="fixed inset-0 z-[100] bg-slate-900/95 flex flex-col items-center justify-center p-4 md:p-8 overflow-hidden backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl overflow-hidden relative max-w-5xl max-h-full flex flex-col w-full h-full md:h-auto">
-        <div className="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
+        <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-4 justify-between items-center shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
             <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Draw Hairline Area</h4>
           </div>
-          <div className="flex items-center space-x-6">
+
+          <div className="flex items-center space-x-4 md:space-x-8">
+            {/* Undo/Redo Controls */}
+            <div className="flex items-center bg-white border border-slate-200 rounded-lg p-1 shadow-sm">
+              <button
+                onClick={undo}
+                disabled={historyIndex < 0}
+                className={`p-2 rounded hover:bg-slate-100 transition ${historyIndex < 0 ? 'opacity-30 cursor-not-allowed' : 'text-slate-700'}`}
+                title="Undo (Ctrl+Z)"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M3 7v6h6" /><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13" /></svg>
+              </button>
+              <button
+                onClick={redo}
+                disabled={historyIndex >= history.length - 1}
+                className={`p-2 rounded hover:bg-slate-100 transition ${historyIndex >= history.length - 1 ? 'opacity-30 cursor-not-allowed' : 'text-slate-700'}`}
+                title="Redo (Ctrl+Y)"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 7v6h-6" /><path d="M3 17a9 9 0 0 1 9-9 9 9 0 0 1 6 2.3l3 2.7" /></svg>
+              </button>
+            </div>
+
+            {/* Brush Controls */}
             <div className="flex items-center space-x-3">
-              <span className="text-xs font-bold text-slate-500 uppercase">Brush Size</span>
+              <span className="text-[10px] font-bold text-slate-500 uppercase">Brush Size</span>
               <input
                 type="range"
                 min="5"
                 max="80"
                 value={brushSize}
                 onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                className="w-32 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-red-600"
+                className="w-24 md:w-32 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-red-600"
               />
             </div>
           </div>
@@ -157,7 +262,7 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
         </div>
 
         <div className="p-4 bg-white border-t border-slate-200 flex space-x-3 justify-end items-center shrink-0">
-          <p className="text-[10px] text-slate-500 font-medium mr-auto">
+          <p className="hidden md:block text-[10px] text-slate-500 font-medium mr-auto">
             <span className="text-red-600 font-bold">Important:</span> Paint solidly over the bald area.
           </p>
           <button

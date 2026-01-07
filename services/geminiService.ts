@@ -121,46 +121,42 @@ export const generateHairVisualization = async (
     throw new Error("API Key not found in environment variables");
   }
 
-  // 2. Define the simulation prompt
+  // 2. Define the simulation prompt with more impactful "Medical" descriptions
   const densityDescription = {
-    [GraftDensity.LOW]: "Low density (35 grafts/cm²). Visible scalp spacing.",
-    [GraftDensity.MEDIUM]: "Medium density (50 grafts/cm²). Natural coverage.",
-    [GraftDensity.HIGH]: "High density (65 grafts/cm²). Thick, full coverage."
+    [GraftDensity.LOW]: "RECONSTRUCT with 25-35 follicular units per cm². This is a 'Light' coverage suitable for a natural look where some scalp is still visible. Use fine, thin grafts.",
+    [GraftDensity.MEDIUM]: "RECONSTRUCT with 45-55 follicular units per cm². This is 'Standard High Quality' coverage. The scalp should be mostly covered, appearing thick and healthy.",
+    [GraftDensity.HIGH]: "RECONSTRUCT with 65-75+ follicular units per cm². This is 'Maximum Density' (Dense Packing). The scalp should be completely obscured by thick, lush, and high-volume hair."
   };
+
+  console.log(`[Simulation] Starting with Density: ${params.density}, Hair: ${params.hairType}`);
 
   const useMask = params.mask;
   const { data: base64Data, mimeType } = getBase64Data(patientImage);
 
-  // UPDATED PROMPT: Enhanced for Spatial Awareness and Multi-Angle Support
-  const prompt = `You are a professional medical-grade hair transplant simulation engine.
+  // UPDATED PROMPT: Ultra-Aggressive for Reconstruction and Density Compliance
+  const prompt = `You are a world-class medical hair transplant simulation engine. Your goal is to show the patient a RECONSTRUCTED, SUCCESSFUL result.
 
 CONTEXT:
-- IMAGE 1: The original patient photo (could be frontal, crown, side, or top-down angle).
-- IMAGE 2: The surgical mask. The RED-painted area defines the target transplant zone.
+- IMAGE 1: The original hair loss photo.
+- IMAGE 2: The surgical mask. The RED-painted area is the EXACT target for new follicular unit transplantation.
 
-CORE RULES (MANDATORY):
-1. PERSPECTIVE & 3D GEOMETRY: Analyze the camera angle and head position in IMAGE 1. The generated hair MUST follow the 3D curvature of the scalp and the perspective of the shot.
-2. HAIR MATCHING: Match the existing hair in IMAGE 1 EXACTLY in terms of:
-   - Color, texture, and thickness.
-   - Natural growth direction (e.g., following the crown whorl or temple flow).
-3. TRANSPLANT ZONE (RED MASK):
-   - You MUST generate hair inside the red-marked area from IMAGE 2.
-   - This red area is a precise map of where the scalp is thinning or bald.
-   - Do NOT generate hair outside this zone unless blending into existing hair.
+MANDATORY EXECUTION RULES:
+1. RECONSTRUCTION (CRITICAL): You MUST fill the entire RED-MARKED AREA from IMAGE 2 with new, healthy hair. Do NOT show the bald or thinning scalp that exists in IMAGE 1 inside this zone. REPLACE it.
+2. DENSITY COMPLIANCE: You must strictly follow the requested density:
+   - ${densityDescription[params.density]}
+   - If HIGH density is requested, the scalp should be ALMOST INVISIBLE under thick hair.
+   - If MEDIUM density is requested, show full coverage with natural scalp depth.
+3. PERSPECTIVE: Maintain the 3D geometry and angle from IMAGE 1. The hair must wrap naturally around the curvature of the head.
+4. NATURAL MATCH: The new hair MUST match the existing hair in IMAGE 1 (Color: same, Texture: ${params.hairType}, Direction: natural flow).
+5. BLENDING: The transition between the new hair (inside the mask) and old hair (outside) must be seamless and indistinguishable.
 
-STYLE PARAMETERS:
-- Hair Type: ${params.hairType}
-- Density: ${densityDescription[params.density]}
-- Demographics: ${params.ethnicity}, Age ${params.age || 'Adult'}
-
-REALISM REQUIREMENTS:
-- The generated hair must blend seamlessly with surrounding hair.
-- Density transitions must be natural and gradual (no hard lines).
-- Avoid artificial symmetry; maintain natural irregularities of human hair.
-- Maintain lighting and shadow consistency according to IMAGE 1.
+NEGATIVE CONSTRAINTS:
+- DO NOT return the same image.
+- DO NOT leave the red area bald or thinning.
+- DO NOT add hair outside the red area unless for edge blending.
 
 OUTPUT GOAL:
-Produce a photorealistic hair transplant simulation that is medically accurate, respects the camera angle, and is indistinguishable from a real result.
+A photorealistic, medical-grade "After" photo that VIRTUALLY ELIMINATES the hair loss shown in the red-marked zone.
 `;
 
 
