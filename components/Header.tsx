@@ -9,7 +9,7 @@ const Header: React.FC = () => {
           <div className="relative group">
             <div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
             <div className="relative flex items-center justify-center bg-white rounded-xl p-1 shadow-lg">
-              <img src="/logo.png" alt="Dr Paul's Logo" className="h-10 md:h-14 w-auto object-contain" />
+              <img src="/logo_white.png" alt="Dr Paul's Logo" className="h-8 md:h-12 w-auto object-contain" />
             </div>
           </div>
           <div className="flex flex-col">

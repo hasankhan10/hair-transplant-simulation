@@ -22,40 +22,42 @@ export const autoCropToHead = async (base64Image: string): Promise<string> => {
             const width = img.width;
             const height = img.height;
 
-            // Target Dimensions (Focus Area)
-            // Usually, the head is in the upper 70% of the photo and centered.
-            // We want to zoom into a tighter box.
+            // AGGRESSIVE HEAD-CENTRIC CROP
+            // We focus on the top-center of the image where the face/scalp usually resides.
+            // We want to eliminate the chest, shoulders, and excessive background.
 
             let cropWidth, cropHeight, startX, startY;
 
             if (width > height) {
-                // Landscape - likely has a lot of "room" on sides
-                cropHeight = height;
-                cropWidth = height * 0.8; // Vertical box focus
+                // Landscape: High focus on the middle vertical slice
+                cropHeight = height * 0.85; // Avoid very top/bottom edges
+                cropWidth = cropHeight * 0.8; // Maintain a 4:5 vertical head ratio
                 startX = (width - cropWidth) / 2;
-                startY = 0;
+                startY = height * 0.05; // Drop slightly from the very top
             } else {
-                // Portrait - already vertical, but maybe too much body
-                cropWidth = width;
-                cropHeight = width * 1.2; // Focus on top portion
-                startX = 0;
-                startY = 0; // Keep the top part (the head)
+                // Portrait: This is the most common for selfies.
+                // We need to cut inward from the sides and significantly from the bottom.
+                cropWidth = width * 0.75; // Take only the center 75% of the width
+                cropHeight = cropWidth * 1.1; // Make it a vertical rectangle (Head sized)
+                startX = (width - cropWidth) / 2;
+
+                // Hair transplants need the TOP of the head, so we start near the top.
+                // We go down just enough to capture the neck but stop before the chest.
+                startY = height * 0.05;
             }
 
-            // Scaled Zoom: We want to center it slightly better
-            // For hair transplants, the top of the head is the priority
-
-            canvas.width = 1024; // Standardize for AI clarity
+            // Standardize output to a focused square for the AI
+            canvas.width = 1024;
             canvas.height = 1024;
 
-            // Draw the "Smart Crop"
+            // Draw the "Face & Head" Focus
             ctx.drawImage(
                 img,
-                startX, startY, cropWidth, cropHeight, // Source
-                0, 0, 1024, 1024                       // Destination
+                startX, startY, cropWidth, cropHeight, // Source (Focused on head)
+                0, 0, 1024, 1024                       // Destination (Clinical Standard)
             );
 
-            resolve(canvas.toDataURL('image/jpeg', 0.9));
+            resolve(canvas.toDataURL('image/jpeg', 0.95));
         };
         img.onerror = reject;
         img.src = base64Image;

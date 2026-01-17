@@ -145,7 +145,7 @@ const App: React.FC = () => {
             &copy; {new Date().getFullYear()} Hair Transplant Simulation.
           </p>
           <p className="text-slate-400 text-sm mt-2 italic">
-            "AI-generated preview. Results may vary." Developed by <a target="_blank" className="text-primary hover:underline" href="http://www.stovamedia.in">Stova Media</a>
+            "AI-generated preview. Results may vary." Developed by <a target="_blank" className="text-primary hover:underline font-bold" href="http://www.stovamedia.in">Stova Media</a>
           </p>
         </div>
       </footer>
