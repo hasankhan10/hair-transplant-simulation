@@ -117,8 +117,8 @@ const compositeStrictResult = async (
     const tempCtx = tempCanvas.getContext('2d');
 
     if (tempCtx) {
-      // 6px feathering for a refined blend that hides the "cut" line
-      tempCtx.filter = 'blur(12px)';
+      // 6px feathering for a refined blend that hides the "cut" line without losing thickness
+      tempCtx.filter = 'blur(6px)';
       tempCtx.drawImage(maskCanvas, 0, 0);
       tempCtx.filter = 'none'; // Reset filter
 
@@ -146,9 +146,9 @@ export const generateHairVisualization = async (
   if (!apiKey) throw new Error("API Key not found");
 
   const densityDescription = {
-    [GraftDensity.LOW]: "2,500 Grafts (Medium density, natural finish).",
-    [GraftDensity.MEDIUM]: "5,000 Grafts (High density, thick coverage).",
-    [GraftDensity.HIGH]: "8,000+ Grafts (MAXIMUM DENSITY PACKING - ZERO SCALP)."
+    [GraftDensity.LOW]: "100% COMPREHENSIVE COVERAGE. Fine strands, sleek appearance. Every part of the green zone must have hair.",
+    [GraftDensity.MEDIUM]: "100% COMPREHENSIVE COVERAGE. Standard strand thickness, natural volume. Opaque coverage.",
+    [GraftDensity.HIGH]: "100% COMPREHENSIVE COVERAGE. Thick, coarse strands, maximal volume, ultra-dense 'forest' look. Totally opaque."
   };
 
   // 1. Prepare the contextual image for the AI
@@ -158,27 +158,30 @@ export const generateHairVisualization = async (
 
   const { data: base64Data, mimeType } = getBase64Data(aiInputImage);
 
-  const prompt = `ROLE: MASTER HAIR TRANSPLANT SURGEON.
+  const prompt = `ROLE: PROFESSIONAL HAIR TRANSPLANT SURGEON.
 The image contains a BRIGHT GREEN (CHROMA KEY) MASK. This green area marks the bald zone that needs immediate restoration.
 
 YOUR MISSION:
-1. ANALYZE EXISTING HAIR: Look at the hair OUTSIDE the green zone. Note the:
+1. ANALYZE EXISTING HAIR & PERSPECTIVE: Look at the hair OUTSIDE the green zone. Note the:
    - "Salt & Pepper" Gray Ratio (Crucial for realism).
    - Strand Thickness (Fine vs Coarse).
    - Curl Pattern (Straight vs Wavy).
    - Light Diffusion (Soft vs Hard).
-
-2. PERFORM THE TRANSPLANT:
-   - REPLACE the Green Zone entirely with new hair that matches the analysis above.
-   - The new hair must be INDISTINGUISHABLE from the existing hair.
+   - CAMERA ANGLE: Perfectly match the orientation (Frontal, Vertex/Crown, or Profile).
+ 
+2. PERFORM THE TRANSPLANT (STRICT RULES):
+   - MANDATORY 100% COVERAGE: Every single pixel of the Green Zone MUST be replaced with hair. There must be NO bald scalp or thinning visible in the green area, regardless of density.
+   - DENSITY FOCUS: ${densityDescription[params.density]} 
+   - Even on 'LOW' density, the coverage must be 100% complete across the entire zone. The setting only changes the HAIR THICKNESS and VOLUME, not the percentage of area covered.
+   - DIRECTIONAL FLOW: Follow the natural growth direction of existing hair. For Crown/Vertex, create a natural swirl.
    
 3. REALISM RULES:
-   - NO "WIG" LOOK: Randomize the direction slightly. Real hair is messy.
-   - NO GREEN REFLECTIONS: Ensure the final hair has zero green tint.
-   - NATURAL DENSITY: ${densityDescription[params.density]}.
+   - NO BALD SPOTS: Do not leave any part of the green zone unrestored. 
+   - NO "WIG" LOOK: Randomize the direction slightly to match human growth patterns.
+   - ZERO GREEN: The final result must have exactly 0% green pixels. 
    - SEAMLESS BLEND: The transition from the real hair to the new hair must be invisible.
-
-OUTPUT: A photorealistic "After" photo. The green is gone. The hair is restored.`;
+ 
+OUTPUT: A photorealistic "After" photo. High-resolution, surgical-grade precision.`;
   const ai = new GoogleGenAI({ apiKey });
 
   const response = await ai.models.generateContent({

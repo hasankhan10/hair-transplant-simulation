@@ -1,22 +1,52 @@
-
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Hair Transplant Simulation</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f8fafc;
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            primary: '#D71A21',
+            secondary: '#26333B',
+            accent: '#F7B7A3',
+          },
+          fontFamily: {
+            poppins: ['Poppins', 'sans-serif'],
+            opensans: ['Open Sans', 'sans-serif'],
+          }
+        }
+      }
     }
+  </script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@600;700;800&family=Open+Sans:wght@400;500;600&display=swap');
+
+    body {
+      font-family: 'Open Sans', 'sans-serif';
+      background-color: #f8fafc;
+      color: #26333B;
+    }
+
     .clinical-shadow {
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
     }
+
+    h1,
+    h2,
+    h3,
+    h4,
+    h5,
+    h6,
+    .font-poppins {
+      font-family: 'Poppins', sans-serif !important;
+    }
   </style>
-<script type="importmap">
+  <script type="importmap">
 {
   "imports": {
     "react/": "https://esm.sh/react@^19.2.3/",
@@ -26,10 +56,12 @@
   }
 }
 </script>
-<link rel="stylesheet" href="/index.css">
+  <link rel="stylesheet" href="/index.css">
 </head>
+
 <body>
   <div id="root"></div>
-<script type="module" src="/index.tsx"></script>
+  <script type="module" src="/index.tsx"></script>
 </body>
+
 </html>

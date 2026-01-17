@@ -3,22 +3,30 @@ import React from 'react';
 
 const Header: React.FC = () => {
   return (
-    <header className="bg-white border-b border-slate-200 sticky top-0 z-50">
-      <div className="container mx-auto px-4 h-16 flex items-center justify-between">
-        <div className="flex items-center space-x-2">
-          <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-            <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.828 14.828a4 4 0 01-5.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
+    <header className="bg-gradient-to-r from-secondary via-[#1a2329] to-black border-b-2 border-primary sticky top-0 z-50 shadow-xl">
+      <div className="container mx-auto px-4 py-3 md:py-0 md:h-20 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
+        <div className="flex items-center space-x-3 w-full md:w-auto justify-center md:justify-start">
+          <div className="relative group">
+            <div className="absolute -inset-1 bg-gradient-to-r from-primary to-accent rounded-xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+            <div className="relative flex items-center justify-center bg-white rounded-xl p-1 shadow-lg">
+              <img src="/logo.png" alt="Dr Paul's Logo" className="h-10 md:h-14 w-auto object-contain" />
+            </div>
           </div>
-          <span className="text-xl font-bold text-slate-900 tracking-tight">Hair Transplant <span className="text-blue-600">Simulation</span></span>
+          <div className="flex flex-col">
+            <span className="text-lg md:text-2xl font-extrabold text-white tracking-tight font-poppins leading-tight">
+              Dr Paul's <span className="text-primary">Hair Transplant</span>
+            </span>
+            <span className="text-[10px] md:text-xs font-bold text-accent uppercase tracking-[0.3em] font-poppins">
+              AI Simulation Suite
+            </span>
+          </div>
         </div>
-        
-        <div className="hidden md:flex items-center space-x-6 text-sm font-medium text-slate-600">
-          <span className="flex items-center">
-            <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
-            AI Preview Tool
-          </span>
+
+        <div className="flex items-center space-x-6 text-sm font-bold text-white/90 font-poppins">
+          <div className="hidden sm:flex items-center px-4 py-1.5 bg-white/5 rounded-full border border-white/10 backdrop-blur-md">
+            <span className="w-2 h-2 bg-green-500 rounded-full mr-2 shadow-[0_0_10px_rgba(34,197,94,0.6)] animate-pulse"></span>
+            <span className="text-[10px] md:text-xs uppercase tracking-wider">Clinical AI Active</span>
+          </div>
         </div>
       </div>
     </header>

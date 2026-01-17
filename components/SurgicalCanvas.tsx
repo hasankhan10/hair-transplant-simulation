@@ -24,7 +24,8 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.strokeStyle = 'rgba(220, 38, 38, 0.85)';
+    ctx.strokeStyle = 'rgba(215, 26, 33, 0.85)'; // Brand Red (#D71A21)
+    ctx.fillStyle = 'rgba(215, 26, 33, 0.6)';   // Slightly more transparent fill for better visibility
     ctx.lineWidth = brushSize;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -118,7 +119,11 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
     const canvas = canvasRef.current;
     if (canvas) {
       const ctx = canvas.getContext('2d');
-      ctx?.beginPath();
+      if (ctx) {
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke(); // Re-stroke to ensure the boundary is crisp after fill
+      }
       saveToHistory();
     }
   };
@@ -191,8 +196,8 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
       <div className="bg-white rounded-2xl shadow-2xl overflow-hidden relative max-w-5xl max-h-full flex flex-col w-full h-full md:h-auto">
         <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-4 justify-between items-center shrink-0">
           <div className="flex items-center space-x-3">
-            <div className="w-3 h-3 bg-red-600 rounded-full animate-pulse"></div>
-            <h4 className="text-sm font-bold text-slate-800 uppercase tracking-wider">Draw Hairline Area</h4>
+            <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
+            <h4 className="text-base font-bold text-secondary uppercase tracking-wider font-poppins">Draw Hairline Area</h4>
           </div>
 
           <div className="flex items-center space-x-4 md:space-x-8">
@@ -218,14 +223,14 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
 
             {/* Brush Controls */}
             <div className="flex items-center space-x-3">
-              <span className="text-[10px] font-bold text-slate-500 uppercase">Brush Size</span>
+              <span className="text-xs font-bold text-slate-500 uppercase">Brush Size</span>
               <input
                 type="range"
                 min="5"
                 max="80"
                 value={brushSize}
                 onChange={(e) => setBrushSize(parseInt(e.target.value))}
-                className="w-24 md:w-32 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-red-600"
+                className="w-24 md:w-32 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary"
               />
             </div>
           </div>
@@ -262,32 +267,32 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
         </div>
 
         <div className="p-4 bg-white border-t border-slate-200 flex space-x-3 justify-end items-center shrink-0">
-          <p className="hidden md:block text-[10px] text-slate-500 font-medium mr-auto">
+          <p className="hidden md:block text-xs text-slate-500 font-medium mr-auto">
             <span className="text-red-600 font-bold">Important:</span> Paint solidly over the bald area.
           </p>
           <button
             onClick={clear}
-            className="px-4 py-2 text-xs font-bold text-slate-600 hover:text-slate-800 transition"
+            className="px-4 py-2 text-sm font-bold text-slate-600 hover:text-slate-800 transition"
           >
             Clear
           </button>
           <button
             onClick={onCancel}
-            className="px-4 py-2 text-xs font-bold text-slate-400 hover:text-slate-600 transition"
+            className="px-4 py-2 text-sm font-bold text-slate-400 hover:text-slate-600 transition"
           >
             Cancel
           </button>
           <button
             onClick={handleSave}
             disabled={!hasDrawn}
-            className={`px-6 py-2 rounded-lg text-xs font-bold text-white shadow-md transition ${hasDrawn ? 'bg-blue-600 hover:bg-blue-700' : 'bg-slate-300 cursor-not-allowed'}`}
+            className={`px-6 py-2 rounded-lg text-sm font-bold text-white shadow-md transition font-poppins ${hasDrawn ? 'bg-primary hover:bg-primary/90' : 'bg-slate-300 cursor-not-allowed'}`}
           >
             Use Selection
           </button>
         </div>
       </div>
-      <p className="mt-4 text-white/70 text-xs text-center font-medium shadow-black drop-shadow-md">
-        The AI will ONLY add hair to red areas. Leave unselected areas empty.
+      <p className="mt-4 text-white/70 text-sm text-center font-medium shadow-black drop-shadow-md">
+        The AI will ONLY add hair to brand areas. Leave unselected areas empty.
       </p>
     </div>
   );

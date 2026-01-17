@@ -75,11 +75,11 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
     <div className="bg-white rounded-xl clinical-shadow p-6 space-y-8 sticky top-24 border border-slate-100">
       <div>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-sm font-semibold text-slate-500 uppercase tracking-wider">1. Upload Photo</h3>
+          <h3 className="text-base font-bold text-secondary uppercase tracking-wider font-poppins">1. Upload Photo</h3>
           {hasImage && (
             <button
               onClick={onReset}
-              className="text-[10px] text-red-600 hover:text-red-800 font-bold uppercase"
+              className="text-xs text-red-600 hover:text-red-800 font-bold uppercase"
             >
               Clear All
             </button>
@@ -88,13 +88,13 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         {!hasImage ? (
           <button
             onClick={() => fileInputRef.current?.click()}
-            className="w-full flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg py-12 px-4 transition hover:border-blue-400 hover:bg-blue-50 group"
+            className="w-full flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg py-12 px-4 transition hover:border-primary hover:bg-primary/5 group"
           >
-            <svg className="w-10 h-10 text-slate-400 mb-2 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-10 h-10 text-slate-400 mb-2 group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
             </svg>
-            <span className="text-sm font-medium text-slate-600 group-hover:text-blue-600">Click to Upload Photo</span>
-            <span className="text-xs text-slate-400 mt-1">Selfie or headshot</span>
+            <span className="text-base font-medium text-slate-600 group-hover:text-primary">Click to Upload Photo</span>
+            <span className="text-sm text-slate-400 mt-1">Selfie or headshot</span>
           </button>
         ) : (
           <div className="flex flex-col space-y-3">
@@ -109,7 +109,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
             <button
               onClick={onStartMapping}
-              className={`w-full flex items-center justify-center space-x-2 py-3 rounded-lg text-xs font-bold transition shadow-sm border-2 ${params.mask ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' : 'bg-slate-800 text-white border-slate-800 hover:bg-slate-900'}`}
+              className={`w-full flex items-center justify-center space-x-2 py-3 rounded-lg text-sm font-bold transition shadow-sm border-2 ${params.mask ? 'bg-red-50 text-red-700 border-red-200 hover:bg-red-100' : 'bg-slate-800 text-white border-slate-800 hover:bg-slate-900'}`}
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -132,8 +132,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
         <div>
           <div className="flex justify-between items-center mb-2">
-            <label className="block text-xs font-bold text-slate-700 uppercase tracking-tight">Density Preference</label>
-            <span className="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 uppercase tracking-wide">
+            <label className="block text-sm font-bold text-secondary uppercase tracking-tight font-poppins">Density Preference</label>
+            <span className="text-xs font-bold text-primary bg-primary/10 px-2 py-0.5 rounded border border-primary/20 uppercase tracking-wide">
               {densityLevels[currentDensityIndex].metric}
             </span>
           </div>
@@ -146,7 +146,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               step="1"
               value={currentDensityIndex}
               onChange={handleDensityChange}
-              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-blue-600 focus:outline-none"
+              className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
             />
             <div className="flex justify-between mt-3">
               {densityLevels.map((level, idx) => (
@@ -154,8 +154,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                   key={level.label}
                   className={`flex flex-col items-center flex-1 ${idx === 0 ? 'items-start' : idx === 2 ? 'items-end' : ''}`}
                 >
-                  <div className={`w-0.5 h-1.5 rounded-full mb-1 ${currentDensityIndex === idx ? 'bg-blue-600' : 'bg-slate-300'}`} />
-                  <span className={`text-[9px] font-bold uppercase ${currentDensityIndex === idx ? 'text-blue-600' : 'text-slate-400'}`}>
+                  <div className={`w-0.5 h-1.5 rounded-full mb-1 ${currentDensityIndex === idx ? 'bg-primary' : 'bg-slate-300'}`} />
+                  <span className={`text-xs font-bold uppercase ${currentDensityIndex === idx ? 'text-primary' : 'text-slate-400'} font-poppins`}>
                     {level.label}
                   </span>
                 </div>
@@ -169,9 +169,9 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         <button
           onClick={onRun}
           disabled={!hasImage || isProcessing || !params.mask}
-          className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95 flex flex-col items-center justify-center ${!hasImage || isProcessing || !params.mask
-              ? 'bg-slate-300 cursor-not-allowed shadow-none text-slate-500'
-              : 'bg-blue-600 hover:bg-blue-700 hover:-translate-y-0.5'
+          className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition transform active:scale-95 flex flex-col items-center justify-center font-poppins ${!hasImage || isProcessing || !params.mask
+            ? 'bg-slate-300 cursor-not-allowed shadow-none text-slate-500'
+            : 'bg-primary hover:bg-primary/90 hover:-translate-y-0.5'
             }`}
         >
           {isProcessing ? (
@@ -184,22 +184,22 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             </div>
           ) : (
             <>
-              <span className="text-sm">Generate Preview</span>
+              <span className="text-base">Generate Preview</span>
               {!params.mask && hasImage && (
-                <span className="text-[10px] font-normal opacity-70">Draw hair area first</span>
+                <span className="text-xs font-normal opacity-70">Draw hair area first</span>
               )}
             </>
           )}
         </button>
       </div>
 
-      <div className="bg-amber-50 rounded-lg p-3 border border-amber-200">
+      <div className="bg-accent/10 rounded-lg p-3 border border-accent/20">
         <div className="flex items-start">
-          <svg className="w-4 h-4 text-amber-600 mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+          <svg className="w-5 h-5 text-primary mt-0.5 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
           </svg>
-          <p className="text-[10px] text-amber-800 leading-relaxed font-medium">
-            <strong>TIP:</strong> The AI will only add hair in the red areas you draw. Make sure to cover the spots you want to restore.
+          <p className="text-xs text-secondary leading-relaxed font-bold">
+            <strong>TIP:</strong> The AI will only add hair in the areas you draw. Make sure to cover the spots you want to restore.
           </p>
         </div>
       </div>
