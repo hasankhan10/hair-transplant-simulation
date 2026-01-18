@@ -12,6 +12,7 @@ import {
 import ControlPanel from './components/ControlPanel';
 import ImageDisplay from './components/ImageDisplay';
 import Header from './components/Header';
+import HowItWorksModal from './components/HowItWorksModal';
 import { autoCropToHead } from './services/imageProcessor';
 import { generateHairVisualization } from './services/geminiService';
 
@@ -21,6 +22,7 @@ const App: React.FC = () => {
   const [isMapping, setIsMapping] = useState(false);
   const [result, setResult] = useState<VisualizationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showHowItWorks, setShowHowItWorks] = useState(false);
 
   const [params, setParams] = useState<VisualizationParams>({
     density: GraftDensity.MEDIUM
@@ -103,7 +105,7 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header />
+      <Header onShowHowItWorks={() => setShowHowItWorks(true)} />
 
       <main className="flex-grow container mx-auto px-4 py-8 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
@@ -149,7 +151,12 @@ const App: React.FC = () => {
           </p>
         </div>
       </footer>
-    </div>
+
+      <HowItWorksModal
+        isOpen={showHowItWorks}
+        onClose={() => setShowHowItWorks(false)}
+      />
+    </div >
   );
 };
 

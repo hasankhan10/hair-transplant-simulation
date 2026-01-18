@@ -1,7 +1,11 @@
 
 import React from 'react';
 
-const Header: React.FC = () => {
+interface HeaderProps {
+  onShowHowItWorks: () => void;
+}
+
+const Header: React.FC<HeaderProps> = ({ onShowHowItWorks }) => {
   return (
     <header className="bg-gradient-to-r from-secondary via-[#1a2329] to-black border-b-2 border-primary sticky top-0 z-50 shadow-xl">
       <div className="container mx-auto px-4 py-3 md:py-0 md:h-20 flex flex-col md:flex-row items-center justify-between gap-4 md:gap-0">
@@ -22,7 +26,15 @@ const Header: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center space-x-6 text-sm font-bold text-white/90 font-poppins">
+        <div className="flex items-center space-x-4 md:space-x-6 text-sm font-bold text-white/90 font-poppins">
+          <button
+            onClick={onShowHowItWorks}
+            className="flex items-center px-4 py-2 bg-primary/10 hover:bg-primary/20 text-accent border border-accent/20 rounded-lg transition-all active:scale-95 group"
+          >
+            <svg className="w-5 h-5 mr-2 group-hover:rotate-12 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <span className="text-xs md:text-sm uppercase tracking-wider">How It Works</span>
+          </button>
+
           <div className="hidden sm:flex items-center px-4 py-1.5 bg-white/5 rounded-full border border-white/10 backdrop-blur-md">
             <span className="w-2 h-2 bg-green-500 rounded-full mr-2 shadow-[0_0_10px_rgba(34,197,94,0.6)] animate-pulse"></span>
             <span className="text-[10px] md:text-xs uppercase tracking-wider">Clinical AI Active</span>

@@ -21,34 +21,42 @@ export const autoCropToHead = async (base64Image: string): Promise<string> => {
 
             const width = img.width;
             const height = img.height;
+            const aspectRatio = height / width;
 
             let cropWidth, cropHeight, startX, startY;
 
-            // SURGICAL HEADSHOT CROP
-            // We force a perfectly square crop to prevent any "squeezing" or stretching.
-            // We zoom in to focus strictly on the Face/Head area, exactly like Photo 2.
+            // INTELLIGENT CLINICAL CROP
+            // We differentiate between "Already focused" photos and "Torso/Distant" photos.
+            // If the photo is already square-ish (Aspect < 1.25), we assume it's a headshot.
 
-            const side = Math.min(width, height) * 0.55; // Capture a tight head area
+            const isAlreadyFocused = aspectRatio < 1.25;
 
-            cropWidth = side;
-            cropHeight = side;
-
-            startX = (width - side) / 2;
-
-            // Y-Axis: Position strictly towards the top for scalp focus
-            if (height > width) {
-                // Portrait (Selfies): Focus on upper 10%
-                startY = height * 0.10;
+            if (isAlreadyFocused) {
+                // PHOTO TYPE 2 (OR TOP-DOWN SCALP): 
+                // Don't cut aggressively. Just center it and normalize to square.
+                const side = Math.min(width, height) * 0.95; // Take nearly the whole photo
+                cropWidth = side;
+                cropHeight = side;
+                startX = (width - side) / 2;
+                startY = (height - side) / 2;
             } else {
-                // Landscape: Focus on upper 5%
-                startY = height * 0.05;
+                // PHOTO TYPE 1 (TORSO/DISTANT PORTRAIT):
+                // Apply aggressive surgical focus on the head area (upper half).
+                // We take 80% of the width to include face AND scalp context.
+                const side = width * 0.80;
+                cropWidth = side;
+                cropHeight = side;
+                startX = (width - side) / 2;
+
+                // Position startY near the top to capture the scalp/forehead (8% down)
+                startY = height * 0.08;
             }
 
-            // Standardize output to a focused square for the AI
+            // Standardize output to a clinical 1:1 square
             canvas.width = 1024;
             canvas.height = 1024;
 
-            // Draw the "Face & Head" Focus
+            // Draw the "Smart Focus"
             ctx.drawImage(
                 img,
                 startX, startY, cropWidth, cropHeight, // Source (Focused on head)
