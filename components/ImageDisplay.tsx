@@ -61,13 +61,13 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
       )}
 
       {/* Tabs */}
-      <div className="flex bg-slate-50 border-b border-slate-200">
+      <div className="flex bg-slate-50 border-b border-slate-200 overflow-x-auto scrollbar-hide no-scrollbar">
         <button
           onClick={() => setActiveTab('comparison')}
-          className={`px-6 py-4 text-base font-bold transition flex items-center font-poppins ${activeTab === 'comparison' ? 'text-primary bg-white border-r border-slate-200' : 'text-slate-500 hover:text-slate-700'
+          className={`flex-1 min-w-fit px-4 md:px-6 py-3 md:py-4 text-sm md:text-base font-bold transition flex items-center justify-center font-poppins whitespace-nowrap ${activeTab === 'comparison' ? 'text-primary bg-white border-r border-slate-200' : 'text-slate-500 hover:text-slate-700'
             }`}
         >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 mr-2 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
           </svg>
           Comparison
@@ -75,10 +75,10 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
         <button
           onClick={() => setActiveTab('result')}
           disabled={!result}
-          className={`px-6 py-4 text-base font-bold transition flex items-center font-poppins ${activeTab === 'result' ? 'text-primary bg-white border-x border-slate-200' : 'text-slate-500 hover:text-slate-700'
+          className={`flex-1 min-w-fit px-4 md:px-6 py-3 md:py-4 text-sm md:text-base font-bold transition flex items-center justify-center font-poppins whitespace-nowrap ${activeTab === 'result' ? 'text-primary bg-white border-x border-slate-200' : 'text-slate-500 hover:text-slate-700'
             } ${!result && 'opacity-50 cursor-not-allowed'}`}
         >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 mr-2 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
           </svg>
@@ -86,10 +86,10 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
         </button>
         <button
           onClick={() => setActiveTab('original')}
-          className={`px-6 py-4 text-base font-bold transition flex items-center font-poppins ${activeTab === 'original' ? 'text-primary bg-white border-l border-slate-200' : 'text-slate-500 hover:text-slate-700'
+          className={`flex-1 min-w-fit px-4 md:px-6 py-3 md:py-4 text-sm md:text-base font-bold transition flex items-center justify-center font-poppins whitespace-nowrap ${activeTab === 'original' ? 'text-primary bg-white border-l border-slate-200' : 'text-slate-500 hover:text-slate-700'
             }`}
         >
-          <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 mr-2 hidden sm:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
           Original

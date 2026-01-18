@@ -45,26 +45,26 @@ const HowItWorksModal: React.FC<HowItWorksModalProps> = ({ isOpen, onClose }) =>
                             <p className="text-slate-600 mt-2 leading-relaxed">
                                 Choose a clear, high-resolution photo. For best results, use a <strong>front-facing</strong> or <strong>top-down scalp photo</strong> under good lighting.
                             </p>
-                            <div className="mt-5 grid grid-cols-2 gap-4">
+                            <div className="mt-8 grid grid-cols-2 gap-6">
                                 {/* Incorrect Example */}
-                                <div className="relative group">
-                                    <div className="absolute top-2 left-2 bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-lg flex items-center gap-1">
+                                <div className="group flex flex-col items-center">
+                                    <div className="mb-2 bg-red-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-md flex items-center gap-1 uppercase tracking-wider">
                                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M6 18L18 6M6 6l12 12"></path></svg>
-                                        INCORRECT
+                                        Incorrect
                                     </div>
-                                    <div className="aspect-square rounded-xl overflow-hidden border-2 border-slate-100 group-hover:border-red-200 transition-colors bg-slate-50">
+                                    <div className="w-full aspect-square rounded-xl overflow-hidden border-2 border-slate-100 group-hover:border-red-200 transition-colors bg-slate-50">
                                         <img src="/before crop.jpeg" alt="Incorrect distant photo" className="w-full h-full object-contain grayscale-[0.5] group-hover:grayscale-0 transition-all" />
                                     </div>
                                     <p className="text-[11px] text-slate-500 mt-2 font-medium text-center italic leading-tight">Too distant, includes body & torso</p>
                                 </div>
 
                                 {/* Correct Example */}
-                                <div className="relative group">
-                                    <div className="absolute top-2 left-2 bg-green-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full z-10 shadow-lg flex items-center gap-1">
+                                <div className="group flex flex-col items-center">
+                                    <div className="mb-2 bg-green-600 text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-md flex items-center gap-1 uppercase tracking-wider">
                                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
-                                        CORRECT
+                                        Correct
                                     </div>
-                                    <div className="aspect-square rounded-xl overflow-hidden border-2 border-slate-100 group-hover:border-green-200 transition-colors bg-slate-50">
+                                    <div className="w-full aspect-square rounded-xl overflow-hidden border-2 border-slate-100 group-hover:border-green-200 transition-colors bg-slate-50">
                                         <img src="/after crop.jpeg" alt="Correct headshot photo" className="w-full h-full object-contain transition-all" />
                                     </div>
                                     <p className="text-[11px] text-slate-500 mt-2 font-medium text-center italic leading-tight">Tight focus on face & scalp</p>
