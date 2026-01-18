@@ -21,29 +21,36 @@ export const autoCropToHead = async (base64Image: string): Promise<string> => {
 
             const width = img.width;
             const height = img.height;
-
-            // AGGRESSIVE HEAD-CENTRIC CROP
-            // We focus on the top-center of the image where the face/scalp usually resides.
-            // We want to eliminate the chest, shoulders, and excessive background.
+            const aspectRatio = height / width;
 
             let cropWidth, cropHeight, startX, startY;
 
-            if (width > height) {
-                // Landscape: High focus on the middle vertical slice
-                cropHeight = height * 0.85; // Avoid very top/bottom edges
-                cropWidth = cropHeight * 0.8; // Maintain a 4:5 vertical head ratio
-                startX = (width - cropWidth) / 2;
-                startY = height * 0.05; // Drop slightly from the very top
-            } else {
-                // Portrait: This is the most common for selfies.
-                // We need to cut inward from the sides and significantly from the bottom.
-                cropWidth = width * 0.75; // Take only the center 75% of the width
-                cropHeight = cropWidth * 1.1; // Make it a vertical rectangle (Head sized)
-                startX = (width - cropWidth) / 2;
+            // INTELLIGENT HEAD-DETECTION HEURISTIC
+            // If the image is ALREADY a headshot (relatively square or 4:5 ratio),
+            // we skip aggressive cropping to avoid zooming into the nose/eyes.
+            // If it's a full-torso shot (usually much taller or wider), we apply aggressive zoom.
 
-                // Hair transplants need the TOP of the head, so we start near the top.
-                // We go down just enough to capture the neck but stop before the chest.
+            const isAlreadyHeadshot = aspectRatio > 0.7 && aspectRatio < 1.3;
+
+            if (isAlreadyHeadshot) {
+                // If it's already a headshot, we just "Standardize" it.
+                // We take 95% of the image to clean up any rough edges.
+                cropWidth = width * 0.95;
+                cropHeight = height * 0.95;
+                startX = (width - cropWidth) / 2;
+                startY = (height - cropHeight) / 2;
+            } else if (width > height) {
+                // Landscape (Torso Shot): High focus on the middle vertical slice
+                cropWidth = width * 0.45;
+                cropHeight = cropWidth; // Square focus
+                startX = (width - cropWidth) / 2;
                 startY = height * 0.05;
+            } else {
+                // Portrait (Torso Shot): Aggressive head-focus
+                cropWidth = width * 0.48; // Capture 48% of the width (center)
+                cropHeight = cropWidth * 1.1; // Maintain a vertical face/head ratio
+                startX = (width - cropWidth) / 2;
+                startY = height * 0.08;
             }
 
             // Standardize output to a focused square for the AI

@@ -242,7 +242,7 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
             <img
               src={image}
               alt="Base"
-              className="max-h-[60vh] md:max-h-[70vh] max-w-full block pointer-events-none select-none object-contain"
+              className="max-h-[60vh] md:max-h-[70vh] max-w-full w-auto h-auto block pointer-events-none select-none"
               onLoad={(e) => {
                 const img = e.currentTarget;
                 if (canvasRef.current) {

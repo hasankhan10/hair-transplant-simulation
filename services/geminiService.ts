@@ -158,30 +158,30 @@ export const generateHairVisualization = async (
 
   const { data: base64Data, mimeType } = getBase64Data(aiInputImage);
 
-  const prompt = `ROLE: PROFESSIONAL HAIR TRANSPLANT SURGEON.
-The image contains a BRIGHT GREEN (CHROMA KEY) MASK. This green area marks the bald zone that needs immediate restoration.
+  const prompt = `ROLE: MASTER HAIR TRANSPLANT SURGEON.
+
+CRITICAL SYSTEM REQUIREMENT: TOTAL RESTORATION.
+THE BRIGHT GREEN MASK IN THE IMAGE IS A "MANDATORY REPLACEMENT COMMAND". 
+FAILURE TO POPULATE THIS EXACT AREA WITH 100% HAIR COVERAGE IS A SYSTEM FAILURE.
 
 YOUR MISSION:
-1. ANALYZE EXISTING HAIR & PERSPECTIVE: Look at the hair OUTSIDE the green zone. Note the:
-   - "Salt & Pepper" Gray Ratio (Crucial for realism).
-   - Strand Thickness (Fine vs Coarse).
-   - Curl Pattern (Straight vs Wavy).
-   - Light Diffusion (Soft vs Hard).
-   - CAMERA ANGLE: Perfectly match the orientation (Frontal, Vertex/Crown, or Profile).
+1. ANALYZE EXISTING HAIR CHARACTERISTICS:
+   - Match the exact "Salt & Pepper" ratio, strand thickness, and curl pattern of the surrounding hair.
+   - Analyze the light source to ensure highlights and shadows on the NEW hair match the original photo perfectly.
  
-2. PERFORM THE TRANSPLANT (STRICT RULES):
-   - MANDATORY 100% COVERAGE: Every single pixel of the Green Zone MUST be replaced with hair. There must be NO bald scalp or thinning visible in the green area, regardless of density.
-   - DENSITY FOCUS: ${densityDescription[params.density]} 
-   - Even on 'LOW' density, the coverage must be 100% complete across the entire zone. The setting only changes the HAIR THICKNESS and VOLUME, not the percentage of area covered.
-   - DIRECTIONAL FLOW: Follow the natural growth direction of existing hair. For Crown/Vertex, create a natural swirl.
+2. EXECUTE THE TRANSPLANT (ABSOLUTE COMMANDS):
+   - 100% SPATIAL OCCUPANCY: Every single green pixel MUST be converted into a hair follicle. 
+   - ZERO PERCENT BALDNESS: It is FORBIDDEN to leave any part of the green area as skin, scalp, or thinning hair.
+   - DENSITY SPECIFICATION: ${densityDescription[params.density]} 
+   - Even on 'LOW' density, the coverage of the area must be 100% COMPLETE. Only the strand volume changes, NOT the coverage area.
+   - For Vertex/Crown areas: You MUST render a realistic hair whorl (swirl) centerpoint.
    
-3. REALISM RULES:
-   - NO BALD SPOTS: Do not leave any part of the green zone unrestored. 
-   - NO "WIG" LOOK: Randomize the direction slightly to match human growth patterns.
-   - ZERO GREEN: The final result must have exactly 0% green pixels. 
-   - SEAMLESS BLEND: The transition from the real hair to the new hair must be invisible.
- 
-OUTPUT: A photorealistic "After" photo. High-resolution, surgical-grade precision.`;
+3. ARCHITECTURAL RULES:
+   - NO GREEN ARTIFACTS: 100% of the green color must be destroyed and replaced.
+   - PERSPECTIVE LOCK: The hair growth direction must align 100% with the camera angle (Frontal, Vertex, or Profile).
+   - INVISIBLE SEAMS: The transition between existing hair and simulated hair must be biologically seamless.
+
+FINAL OUTPUT: A high-resolution, surgical-grade medical visualization. THE GREEN IS GONE. THE HAIR IS 100% RESTORED.`;
   const ai = new GoogleGenAI({ apiKey });
 
   const response = await ai.models.generateContent({
