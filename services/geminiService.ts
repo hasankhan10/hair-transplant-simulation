@@ -165,21 +165,21 @@ THE BRIGHT GREEN MASK IN THE IMAGE IS A "MANDATORY REPLACEMENT COMMAND".
 FAILURE TO POPULATE THIS EXACT AREA WITH 100% HAIR COVERAGE IS A SYSTEM FAILURE.
 
 YOUR MISSION:
-1. ANALYZE EXISTING HAIR CHARACTERISTICS:
-   - Match the exact "Salt & Pepper" ratio, strand thickness, and curl pattern of the surrounding hair.
-   - Analyze the light source to ensure highlights and shadows on the NEW hair match the original photo perfectly.
+1. ANALYZE SCALP & BIOMETRICS:
+   - REFERENCE SEARCH: Scan for any "donor hair" on the sides or back. If hair exists, match its specific texture, curl, and color (especially gray/salt-&-pepper ratios).
+   - FULLY BALD FALLBACK: If the patient is 100% bald with no reference hair, you MUST generate a "Healthy Natural Texture" that matches the patient's age and ethnicity. Look at their eyebrows and skin tone for clues.
+   - For older patients, include subtle graying for biological realism. For younger patients, use a deeper, high-pigment strand.
  
 2. EXECUTE THE TRANSPLANT (ABSOLUTE COMMANDS):
    - 100% SPATIAL OCCUPANCY: Every single green pixel MUST be converted into a hair follicle. 
-   - ZERO PERCENT BALDNESS: It is FORBIDDEN to leave any part of the green area as skin, scalp, or thinning hair.
+   - ZERO PERCENT BALDNESS: Regardless of how bald the original photo is, the green area must be completely filled.
    - DENSITY SPECIFICATION: ${densityDescription[params.density]} 
-   - Even on 'LOW' density, the coverage of the area must be 100% COMPLETE. Only the strand volume changes, NOT the coverage area.
-   - For Vertex/Crown areas: You MUST render a realistic hair whorl (swirl) centerpoint.
+   - DIRECTIONAL FLOW: Even if no hair exists, you must create a natural growth flow (Forward on forehead, Swirl/Whorl on crown).
    
 3. ARCHITECTURAL RULES:
    - NO GREEN ARTIFACTS: 100% of the green color must be destroyed and replaced.
-   - PERSPECTIVE LOCK: The hair growth direction must align 100% with the camera angle (Frontal, Vertex, or Profile).
-   - INVISIBLE SEAMS: The transition between existing hair and simulated hair must be biologically seamless.
+   - PERSPECTIVE LOCK: The hair growth direction must align 100% with the camera angle.
+   - INVISIBLE SEAMS: The transition between existing skin and new hair must be biologically seamless.
 
 FINAL OUTPUT: A high-resolution, surgical-grade medical visualization. THE GREEN IS GONE. THE HAIR IS 100% RESTORED.`;
   const ai = new GoogleGenAI({ apiKey });
