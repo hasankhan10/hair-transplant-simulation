@@ -31,14 +31,14 @@ const App: React.FC = () => {
   const handleImageUpload = async (imageData: string) => {
     setIsProcessing(true);
     try {
-      // Apply "Smart Zoom" to focus on the scalp/head
-      const focusedImage = await autoCropToHead(imageData);
-      setPatientImage(focusedImage);
+      // Normalize image while preserving original framing
+      const processedImage = await autoCropToHead(imageData);
+      setPatientImage(processedImage);
       setResult(null);
       setError(null);
       setParams(prev => ({ ...prev, mask: undefined }));
     } catch (err) {
-      console.error("Smart Zoom failed:", err);
+      console.error("Clinical normalization failed:", err);
       setPatientImage(imageData); // Fallback to original
     } finally {
       setIsProcessing(false);

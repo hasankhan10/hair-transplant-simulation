@@ -57,6 +57,7 @@ const createAIComposition = async (originalBase64: string, maskBase64: string): 
   const maskCtx = maskCanvas.getContext('2d');
   if (maskCtx) {
     maskCtx.drawImage(mask, 0, 0, canvas.width, canvas.height);
+    maskCtx.drawImage(mask, 0, 0, canvas.width, canvas.height); // Hardened mask signal
 
     // 2. Composite "Source In" to keep only the mask shape but make it green
     maskCtx.globalCompositeOperation = 'source-in';
@@ -146,9 +147,9 @@ export const generateHairVisualization = async (
   if (!apiKey) throw new Error("API Key not found");
 
   const densityDescription = {
-    [GraftDensity.LOW]: "100% COMPREHENSIVE COVERAGE. Fine strands, sleek appearance. Every part of the green zone must have hair.",
-    [GraftDensity.MEDIUM]: "100% COMPREHENSIVE COVERAGE. Standard strand thickness, natural volume. Opaque coverage.",
-    [GraftDensity.HIGH]: "100% COMPREHENSIVE COVERAGE. Thick, coarse strands, maximal volume, ultra-dense 'forest' look. Totally opaque."
+    [GraftDensity.LOW]: "100% TOTAL COVERAGE. Fine strands, sleek appearance. Every part of the green zone must be densely populated. ZERO bald skin should remain.",
+    [GraftDensity.MEDIUM]: "100% TOTAL COVERAGE. Standard strand thickness, natural volume. Opaque coverage with high follicle density. The transition must be seamless.",
+    [GraftDensity.HIGH]: "MAXIMAL SURGICAL DENSITY. Thick, lush strands, ultra-dense 'forest' look. Totally opaque coverage with ZERO scalp visibility. High-volume restoration."
   };
 
   // 1. Prepare the contextual image for the AI

@@ -24,8 +24,8 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
-    ctx.strokeStyle = 'rgba(215, 26, 33, 0.85)'; // Brand Red (#D71A21)
-    ctx.fillStyle = 'rgba(215, 26, 33, 0.6)';   // Slightly more transparent fill for better visibility
+    ctx.strokeStyle = '#D71A21'; // Solid Brand Red
+    ctx.fillStyle = '#D71A21';   // Solid Brand Red for the auto-fill
     ctx.lineWidth = brushSize;
     ctx.lineCap = 'round';
     ctx.lineJoin = 'round';
@@ -254,7 +254,7 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
             />
             <canvas
               ref={canvasRef}
-              className="absolute inset-0 w-full h-full touch-none"
+              className="absolute inset-0 w-full h-full touch-none opacity-60"
               onMouseDown={startDrawing}
               onMouseMove={draw}
               onMouseUp={stopDrawing}
