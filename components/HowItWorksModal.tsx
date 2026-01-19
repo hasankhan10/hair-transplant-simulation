@@ -118,7 +118,7 @@ const HowItWorksModal: React.FC<HowItWorksModalProps> = ({ isOpen, onClose }) =>
                         <div>
                             <h3 className="text-lg font-bold text-secondary font-poppins">Generate AI Reconstruction</h3>
                             <p className="text-slate-600 mt-2 leading-relaxed">
-                                Click <strong>'Generate Preview'</strong>. Our medical-grade AI will analyze your features and provide a 100% realistic hair transplant visualization in seconds.
+                                Click <strong>'Generate Preview'</strong>. Our medical-grade AI will analyze your features and provide a realistic hair transplant visualization in seconds.
                             </p>
                         </div>
                     </div>

@@ -7,7 +7,7 @@ interface HeaderProps {
 
 const Header: React.FC<HeaderProps> = ({ onShowHowItWorks }) => {
   return (
-    <header className="bg-gradient-to-r from-secondary via-[#1a2329] to-black border-b-2 border-primary sticky top-0 z-50 shadow-xl">
+    <header className="bg-gradient-to-r from-secondary via-[#1a2329] to-[#450a0b] border-b-2 border-primary sticky top-0 z-50 shadow-xl">
       <div className="container mx-auto px-4 py-2 md:py-0 md:h-20 flex flex-col md:flex-row items-center justify-between gap-3 md:gap-0">
         <div className="flex items-center space-x-3 w-full md:w-auto justify-center md:justify-start">
           <div className="relative group">
