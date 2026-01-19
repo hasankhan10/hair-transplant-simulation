@@ -64,10 +64,20 @@ const HowItWorksModal: React.FC<HowItWorksModalProps> = ({ isOpen, onClose }) =>
                                         <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"></path></svg>
                                         Correct
                                     </div>
-                                    <div className="w-full aspect-square rounded-xl overflow-hidden border-2 border-slate-100 group-hover:border-green-200 transition-colors bg-slate-50">
-                                        <img src="/after crop.jpeg" alt="Correct headshot photo" className="w-full h-full object-contain transition-all" />
+                                    <div className="flex flex-col gap-4 w-full">
+                                        <div className="relative">
+                                            <div className="w-full aspect-square rounded-xl overflow-hidden border-2 border-slate-100 group-hover:border-green-200 transition-colors bg-slate-50">
+                                                <img src="/after crop.jpeg" alt="Correct headshot photo" className="w-full h-full object-contain transition-all" />
+                                            </div>
+                                            <p className="text-[10px] text-slate-500 mt-1 font-medium text-center italic leading-tight">Front-facing face & scalp</p>
+                                        </div>
+                                        <div className="relative">
+                                            <div className="w-full aspect-square rounded-xl overflow-hidden border-2 border-slate-100 group-hover:border-green-200 transition-colors bg-slate-50">
+                                                <img src="/top view.jpeg" alt="Correct top view photo" className="w-full h-full object-contain transition-all" />
+                                            </div>
+                                            <p className="text-[10px] text-slate-500 mt-1 font-medium text-center italic leading-tight">Top-down scalp focus</p>
+                                        </div>
                                     </div>
-                                    <p className="text-[11px] text-slate-500 mt-2 font-medium text-center italic leading-tight">Tight focus on face & scalp</p>
                                 </div>
                             </div>
                         </div>
