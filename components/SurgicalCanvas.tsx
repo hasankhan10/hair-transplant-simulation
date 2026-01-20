@@ -237,12 +237,12 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
         </div>
 
         {/* Canvas Container */}
-        <div className="relative flex-grow bg-slate-200/50 overflow-hidden flex items-center justify-center p-2 md:p-6 cursor-crosshair">
-          <div className="relative shadow-2xl border border-slate-300 bg-white max-h-full max-w-full">
+        <div className="relative flex-grow bg-slate-200/50 overflow-auto flex items-center justify-center p-4 md:p-10 cursor-crosshair">
+          <div className="relative inline-block shadow-2xl border border-slate-300 bg-white leading-[0]">
             <img
               src={image}
               alt="Base"
-              className="max-h-[60vh] md:max-h-[70vh] max-w-full w-auto h-auto block pointer-events-none select-none"
+              className="max-h-[75vh] w-auto h-auto block pointer-events-none select-none"
               onLoad={(e) => {
                 const img = e.currentTarget;
                 if (canvasRef.current) {
