@@ -154,47 +154,57 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
         )}
 
         {activeTab === 'comparison' && (
-          <div className="w-full h-full flex flex-col md:flex-row gap-6 items-center justify-center">
-            {/* Before Box */}
-            <div className="flex-1 w-full flex flex-col items-center">
-              <div className="relative bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden group max-w-full">
-                <span className="absolute top-3 left-3 bg-black/70 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest z-10 backdrop-blur-md border border-white/10">Before</span>
-                <div className="relative">
-                  <img src={beforeImage || ''} alt="Original" className="max-h-[350px] md:max-h-[500px] w-auto block object-contain bg-slate-50" />
-                  {currentMask && !result && (
-                    <img src={currentMask} alt="Mask Overlay" className="absolute inset-0 w-full h-full object-contain pointer-events-none opacity-70" />
-                  )}
+          <div className="w-full h-full flex flex-col gap-4">
+            <div className="flex flex-col md:flex-row gap-6 items-center justify-center">
+              {/* Before Box */}
+              <div className="flex-1 w-full flex flex-col items-center">
+                <div className="relative bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden group max-w-full">
+                  <span className="absolute top-3 left-3 bg-black/70 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest z-10 backdrop-blur-md border border-white/10">Before</span>
+                  <div className="relative">
+                    <img src={beforeImage || ''} alt="Original" className="max-h-[350px] md:max-h-[500px] w-auto block object-contain bg-slate-50" />
+                    {currentMask && !result && (
+                      <img src={currentMask} alt="Mask Overlay" className="absolute inset-0 w-full h-full object-contain pointer-events-none opacity-70" />
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Simulation Box */}
+              <div className="flex-1 w-full flex flex-col items-center">
+                <div className="relative bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden group max-w-full">
+                  <span className="absolute top-3 left-3 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest z-10 shadow-lg font-poppins border border-white/20">Simulation</span>
+                  <div className="relative">
+                    {result ? (
+                      <img src={result.afterImage} alt="Result" className="max-h-[350px] md:max-h-[500px] w-auto block object-contain bg-slate-50" />
+                    ) : (
+                      <div className="w-full aspect-square md:w-[400px] bg-slate-100 flex items-center justify-center border-2 border-dashed border-slate-200 rounded-lg m-2">
+                        <div className="text-center">
+                          <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                            </svg>
+                          </div>
+                          <span className="text-slate-400 text-sm font-bold uppercase tracking-wider font-poppins">Visualization Pending</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Simulation Box */}
-            <div className="flex-1 w-full flex flex-col items-center">
-              <div className="relative bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden group max-w-full">
-                <span className="absolute top-3 left-3 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest z-10 shadow-lg font-poppins border border-white/20">Simulation</span>
-                <div className="relative">
-                  {result ? (
-                    <img src={result.afterImage} alt="Result" className="max-h-[350px] md:max-h-[500px] w-auto block object-contain bg-slate-50" />
-                  ) : (
-                    <div className="w-full aspect-square md:w-[400px] bg-slate-100 flex items-center justify-center border-2 border-dashed border-slate-200 rounded-lg m-2">
-                      <div className="text-center">
-                        <div className="w-12 h-12 bg-slate-200 rounded-full flex items-center justify-center mx-auto mb-3">
-                          <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
-                          </svg>
-                        </div>
-                        <span className="text-slate-400 text-sm font-bold uppercase tracking-wider font-poppins">Visualization Pending</span>
-                      </div>
-                    </div>
-                  )}
-                </div>
+            {result && (
+              <div className="text-center mt-2 animate-in fade-in slide-in-from-bottom-2 duration-700">
+                <p className="text-xs md:text-sm font-medium text-slate-600 italic">
+                  Note: If you don't get this result as expected then please try a different angle or look.
+                </p>
               </div>
-            </div>
+            )}
           </div>
         )}
 
         {activeTab === 'result' && result && (
-          <div className="w-full h-full flex items-center justify-center">
+          <div className="w-full h-full flex flex-col items-center justify-center gap-4">
             <div className="relative max-w-2xl w-full bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
               <span className="absolute top-4 left-4 bg-primary text-white text-sm font-bold px-3 py-1.5 rounded-full uppercase tracking-widest z-10 shadow-lg font-poppins">AI Preview</span>
               <img src={result.afterImage} alt="Full Result" className="w-full object-contain bg-slate-50" />
@@ -202,6 +212,9 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
                 <p className="font-semibold italic">"AI-generated preview. Actual results may vary."</p>
               </div>
             </div>
+            <p className="text-xs md:text-sm font-medium text-slate-400 italic text-center max-w-md px-6">
+              If you don't get this result as expected then please try a different angle or look.
+            </p>
           </div>
         )}
 

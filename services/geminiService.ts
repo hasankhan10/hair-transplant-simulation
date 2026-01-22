@@ -13,7 +13,7 @@ const getBase64Data = (dataUrl: string): { data: string; mimeType: string } => {
 };
 
 /**
- * Loads an image from a base64 string
+ * Loads an image from a URL or base64 string
  */
 const loadImage = (src: string): Promise<HTMLImageElement> => {
   return new Promise((resolve, reject) => {
@@ -21,10 +21,24 @@ const loadImage = (src: string): Promise<HTMLImageElement> => {
     img.crossOrigin = "anonymous";
     img.onload = () => resolve(img);
     img.onerror = (e) => {
-      console.error("Failed to load image for composition");
+      console.error("Failed to load image:", src);
       reject(new Error("Image load failed"));
     };
     img.src = src;
+  });
+};
+
+/**
+ * Converts a remote or local image URL to a base64 string
+ */
+const urlToBase64 = async (url: string): Promise<string> => {
+  const response = await fetch(url);
+  const blob = await response.blob();
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result as string);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
   });
 };
 
@@ -64,8 +78,10 @@ const createAIComposition = async (originalBase64: string, maskBase64: string): 
     maskCtx.fillStyle = '#00FF00';
     maskCtx.fillRect(0, 0, canvas.width, canvas.height);
 
-    // 3. Draw the green mask onto the main image
+    // 3. Draw the green mask onto the main image with a tiny 1px blur to help AI soften edges
+    maskCtx.filter = 'blur(1px)';
     ctx.drawImage(maskCanvas, 0, 0);
+    maskCtx.filter = 'none';
   }
 
   return canvas.toDataURL('image/png');
@@ -73,8 +89,6 @@ const createAIComposition = async (originalBase64: string, maskBase64: string): 
 
 /**
  * Strictly composites the AI result onto the original image using the mask.
- * 
- * UPDATED: Uses Deep Feathering (8px) to eliminate the "Photoshop Sticker" look.
  */
 const compositeStrictResult = async (
   originalBase64: string,
@@ -137,7 +151,33 @@ const compositeStrictResult = async (
 };
 
 /**
- * Generates a medical hair visualization using Gemini API
+ * Fetches and encodes the 5 reference images for a given density
+ */
+const getDensityReferences = async (density: GraftDensity): Promise<{ data: string; mimeType: string }[]> => {
+  const densityKey = density.toLowerCase();
+  const fileExtensions = ['.jpg', '.JPG', '.jpeg'];
+  const references: { data: string; mimeType: string }[] = [];
+
+  // We attempt to load 1.jpg, 2.jpg... from the respective public folder
+  const loadAttempts = [1, 2, 3, 4, 5].map(async (num) => {
+    for (const ext of fileExtensions) {
+      try {
+        const url = `/references/density/${densityKey}/${num}${ext}`;
+        const b64 = await urlToBase64(url);
+        return getBase64Data(b64);
+      } catch (e) {
+        continue;
+      }
+    }
+    return null;
+  });
+
+  const results = await Promise.all(loadAttempts);
+  return results.filter((r): r is { data: string; mimeType: string } => r !== null);
+};
+
+/**
+ * Generates a medical hair visualization using Gemini API with Visual Density References
  */
 export const generateHairVisualization = async (
   patientImage: string,
@@ -146,60 +186,105 @@ export const generateHairVisualization = async (
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) throw new Error("API Key not found");
 
-  const densityDescription = {
-    [GraftDensity.LOW]: "100% TOTAL COVERAGE. Fine strands, sleek appearance. Every part of the green zone must be densely populated. ZERO bald skin should remain.",
-    [GraftDensity.MEDIUM]: "100% TOTAL COVERAGE. Standard strand thickness, natural volume. Opaque coverage with high follicle density. The transition must be seamless.",
-    [GraftDensity.HIGH]: "MAXIMAL SURGICAL DENSITY. Thick, lush strands, ultra-dense 'forest' look. Totally opaque coverage with ZERO scalp visibility. High-volume restoration."
-  };
+  const densityLabel = params.density === GraftDensity.LOW ? "LOW" : params.density === GraftDensity.MEDIUM ? "MEDIUM" : "HIGH";
 
-  // 1. Prepare the contextual image for the AI
+  // 1. Prepare the contextual image for the AI (Patient + Mask)
   const aiInputImage = params.mask
     ? await createAIComposition(patientImage, params.mask)
     : patientImage;
 
-  const { data: base64Data, mimeType } = getBase64Data(aiInputImage);
+  const { data: patientBase64, mimeType: patientMime } = getBase64Data(aiInputImage);
+
+  // 2. Fetch Visual Density References (The Magic)
+  const referenceImages = await getDensityReferences(params.density);
 
   const prompt = `ROLE: MASTER HAIR TRANSPLANT SURGEON.
 
 CRITICAL SYSTEM REQUIREMENT: TOTAL RESTORATION.
 THE BRIGHT GREEN MASK IN THE IMAGE IS A "MANDATORY REPLACEMENT COMMAND". 
-FAILURE TO POPULATE THIS EXACT AREA WITH 100% HAIR COVERAGE IS A SYSTEM FAILURE.
 
 YOUR MISSION:
-1. ANALYZE SCALP & BIOMETRICS:
-   - REFERENCE SEARCH: Scan for any "donor hair" on the sides or back. If hair exists, match its specific texture, curl, and color (especially gray/salt-&-pepper ratios).
-   - FULLY BALD FALLBACK: If the patient is 100% bald with no reference hair, you MUST generate a "Healthy Natural Texture" that matches the patient's age and ethnicity. Look at their eyebrows and skin tone for clues.
-   - For older patients, include subtle graying for biological realism. For younger patients, use a deeper, high-pigment strand.
- 
-2. EXECUTE THE TRANSPLANT (ABSOLUTE COMMANDS):
-   - 100% SPATIAL OCCUPANCY: Every single green pixel MUST be converted into a hair follicle. 
-   - ZERO PERCENT BALDNESS: Regardless of how bald the original photo is, the green area must be completely filled.
-   - DENSITY SPECIFICATION: ${densityDescription[params.density]} 
-   - DIRECTIONAL FLOW: Even if no hair exists, you must create a natural growth flow (Forward on forehead, Swirl/Whorl on crown).
-   
-3. ARCHITECTURAL RULES:
-   - NO GREEN ARTIFACTS: 100% of the green color must be destroyed and replaced.
-   - PERSPECTIVE LOCK: The hair growth direction must align 100% with the camera angle.
-   - INVISIBLE SEAMS: The transition between existing skin and new hair must be biologically seamless.
+1. TARGET DENSITY ANALYSIS (VISUAL REFERENCES PROVIDED):
+   - You are provided with 5 REFERENCE IMAGES that define our clinic's standard for ${densityLabel} DENSITY.
+   - ANALYZE THESE REFERENCES ONLY FOR: Follicle spacing, graft density (hair count per square cm), and coverage thickness.
+   - MANDATE: Apply the EXACT SAME density and spacing seen in these 5 references to the Green Mask area on the patient.
 
-FINAL OUTPUT: A high-resolution, surgical-grade medical visualization. THE GREEN IS GONE. THE HAIR IS 100% RESTORED.`;
+2. BIOLOGICAL DNA MATCHING (PATIENT PHOTO):
+   - ANALYZE PATIENT'S DONOR HAIR (Sides/Back): Replicate the patient's EXACT color, texture (straight/wavy/curly), and biological hair DNA.
+   - DO NOT copy the hair color or personal style from the reference photos. Only take the DENSITY.
+
+3. ANATOMY & FRONTOTEMPORAL RECONSTRUCTION:
+   - FACIAL PROPORTION ANALYSIS: Evaluate the "Three-Tier" facial balance. 
+   - FOREHEAD & TEMPLE DESIGN: The green mask indicates both a lowered hairline and a closure of the temples. 
+   - FRONTOTEMPORAL ANGLE: You MUST aggressively populate the "Frontotemporal Recesses" (the corners of the head). These corners are critical for a youthful, surgical restoration. Do not round them off or leave them thin.
+   - TEMPLE POINT RESTORATION: Reconstruct the temple points within the green area with new, dense hair follicles, ensuring they flow seamlessly into the rest of the scalp.
+   - HAIRLINE SOFTNESS: Maintain a natural, irregular, "micro-jagged" hairline at the very boundary, but ensure the bulk of the masked zone is fully opaque.
+
+4. EXECUTE THE TRANSPLANT (ZERO-TOLERANCE RULES):
+   - 100% PERIMETER INTEGRITY: Every green pixel, especially in the CORNERS and EDGES of the mask at the temples, MUST be converted into a hair follicle. There should be ZERO gap between the mask boundary and the generated hair.
+   - DENSITY UNIFORMITY: Ensure the density is consistent from the center of the scalp all the way to the temporal corners. No thinning at the recesses.
+   - DIRECTIONAL FLOW: Create a natural growth flow (Forward/Down at the temples, Forward on forehead, Swirl on crown).
+
+FINAL OUTPUT: A high-resolution, surgical-grade medical visualization. THE GREEN IS GONE. THE HAIR IS 100% RESTORED AT ${densityLabel} DENSITY, WITH SHARP, DEFINED FRONTOTEMPORAL RECONSTRUCTION.`;
+
   const ai = new GoogleGenAI({ apiKey });
+
+  // Build parts with explicit labeling to prevent context leakage
+  const parts: any[] = [];
+
+  // 1. Contextual Training Data (labeled as Sterile References)
+  referenceImages.forEach((ref, index) => {
+    parts.push({ text: `[CLINICAL DENSITY REFERENCE DATA #${index + 1} - FOR DENSITY SPACING ONLY]` });
+    parts.push({
+      inlineData: {
+        data: ref.data,
+        mimeType: ref.mimeType
+      }
+    });
+  });
+
+  // 2. The Actual Patient (labeled as the Identity Source)
+  parts.push({ text: "[PRIMARY PATIENT PHOTO - USE THIS FOR ALL PIXELS, SKIN, AND HAIR DNA]" });
+  parts.push({
+    inlineData: {
+      data: patientBase64,
+      mimeType: patientMime
+    }
+  });
+
+  // 3. The Execution Command
+  const finalPrompt = `ROLE: MASTER HAIR TRANSPLANT SURGEON.
+
+CRITICAL SECURITY RULE: REFERENCE LEAKAGE PREVENTION.
+- DO NOT use any visual elements (faces, backgrounds, clothing, or lighting) from the Reference images.
+- DO NOT copy the hair color or specific hair strands from the Reference images.
+- USE THE REFERENCES ONLY as "Density Frequency Maps" (mathematical hair-per-cm² standards).
+
+YOUR MISSION:
+1. TARGET DENSITY ANALYSIS (STERILE REFERENCES PROVIDED):
+   - Analyze the provided ${densityLabel} DENSITY REFERENCES only for graft count and spacing. 
+   - Apply that mathematical frequency to the patient.
+
+2. BIOLOGICAL IDENTITY PROTECTION:
+   - THE PATIENT IS THE ONLY PIXEL SOURCE. Replicate the patient's biological DNA (texture, color, salt-&-pepper ratio).
+   - The skin, forehead, and existing hair must belong 100% to the patient.
+
+3. ANATOMY & FRONTOTEMPORAL RECONSTRUCTION:
+   - FACIAL PROPORTION ANALYSIS: Evaluate the "Three-Tier" facial balance. 
+   - FRONTOTEMPORAL ANGLE: Aggressively populate the corners with 100% density.
+   - TEMPLE POINT RESTORATION: Ensure the flow is natural and dense at the recesses.
+
+4. EXECUTE THE TRANSPLANT:
+   - 100% SPATIAL OCCUPANCY: Every green pixel must be converted into a hair follicle.
+   - DIRECTIONAL FLOW: Create a natural growth flow matching the patient's existing geometry.
+
+FINAL OUTPUT: A high-resolution simulation. ${densityLabel} DENSITY. ZERO LEAKAGE FROM REFERENCES. 100% PATIENT IDENTITY.`;
+
+  parts.push({ text: finalPrompt });
 
   const response = await ai.models.generateContent({
     model: MODEL_NAME,
-    contents: [
-      {
-        parts: [
-          {
-            inlineData: {
-              data: base64Data,
-              mimeType: mimeType,
-            },
-          },
-          { text: prompt }
-        ],
-      },
-    ],
+    contents: [{ parts }],
   });
 
   let resultImageUrl = '';
@@ -217,8 +302,7 @@ FINAL OUTPUT: A high-resolution, surgical-grade medical visualization. THE GREEN
     throw new Error("AI failed to generate a new look. Please try a different angle.");
   }
 
-  // 3. CLEAN UP: Composite the AI result back onto the original to ensure 
-  // background Sharpness and Edge Blending (feathering).
+  // 3. CLEAN UP: Composite result back onto the original
   if (params.mask) {
     return await compositeStrictResult(patientImage, resultImageUrl, params.mask);
   }
