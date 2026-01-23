@@ -138,8 +138,8 @@ const compositeStrictResult = async (
         const tempCtx = tempCanvas.getContext('2d');
 
         if (tempCtx) {
-            // 6px feathering for a refined blend that hides the "cut" line without losing thickness
-            tempCtx.filter = 'blur(6px)';
+            // 12px deep feathering to eliminate the "box effect" and ensure a seamless surgical blend
+            tempCtx.filter = 'blur(12px)';
             tempCtx.drawImage(maskCanvas, 0, 0);
             tempCtx.filter = 'none'; // Reset filter
 
@@ -199,32 +199,29 @@ export const generateHairVisualization = async (
     // 2. Fetch the Master Reference Image
     const masterRef = await getMasterReference(params.density);
 
-    const prompt = `ROLE: MASTER HAIR TRANSPLANT SURGEON.
+    const prompt = `ROLE: MEDICAL HAIR VISUALIZATION SPECIALIST.
 
-MISSION: FULL HAIR RESTORATION PERFORMANCE.
+MISSION: HARMONIOUS SURGICAL RESTORATION.
 
-1. DATA SOURCE ISOLATION:
-   - [MASTER CLINICAL REFERENCE IMAGE]: Use this ONLY for 'Density Blueprint' (Follicle spacing and hair count per cm²).
-   - [PATIENT PHOTO]: This is the ONLY source for 'Biological DNA'. 
-   - DEFINITION OF DNA: DNA is strictly (Color + Texture + Wave/Curl). 
-   - IGNORE PATIENT CURRENT STATE: Do NOT limit the simulation based on the patient's current baldness, thinness, or short hair length. Simulate a SUCCESSFUL, FULLY GROWN transplant result.
+1. BIOLOGICAL HARMONY (PRIORITY #1):
+   - LIGHTING INTEGRATION: Analyze the light source, shadows, and highlights of the patient's photo. Apply the EXACT same lighting to the new hair so it melts into the donor hair perfectly.
+   - NATURAL HANDSHAKE: Do not create a "box" or "patch". Taper the density at the mask edges to blend seamlessly with the patient's real hair.
+   - DIRECTIONAL FLOW: Follow the patient's natural hair direction (forward at forehead, swirl at crown) with 100% precision.
 
-2. EXECUTION COMMANDS:
-   - DENSITY SUPREMACY: Apply the ${densityLabel} DENSITY from the reference image aggressively. Every green pixel MUST be replaced by thick, healthy hair follicles.
-   - TEXTURE MATCHING: Ensure the new hair has the exact color and curl pattern of the patient's donor hair (sides/back).
-   - OPAQUE COVERAGE: Avoid "wispy" or "thin" results. The goal is 100% opaque, consistent coverage within the mask.
+2. DENSITY MAPPING (MASTER REFERENCE):
+   - [MASTER CLINICAL REFERENCE]: Use this as your primary frequency standard for follicle count.
+   - CONSERVATIVE OFFSET: Generate exactly **10% LESS DENSITY** than what is visible in the reference image. This 10% reduction ensures a more natural, realistic clinical result that avoids an "artificial wig" look.
+   - OPAQUE CORE, SOFT EDGES: The center of the mask should follow this slightly reduced standard, while the perimeter must be soft and tapered.
 
-3. ANATOMY & FRONTOTEMPORAL DESIGN:
-   - FACIAL PROPORTIONS: Analyze the face for the perfect, age-appropriate hairline placement.
-   - FRONTOTEMPORAL CORNERS: The recesses (corners of the head) must be densely populated with NO thinning at the edges. Define a strong, youthful temporal angle.
-   - HAIRLINE SOFTNESS: Ensure the front boundary is natural and irregular (micro-jagged), but the area inside is MAXIMALLY dense.
+3. IDENTITY PRESERVATION:
+   - [PATIENT PHOTO] is the exclusive source for DNA (Color + Texture + Wave).
+   - IGNORE CURRENT THINNING: Restore the area as a successful, fully-grown result. The new hair should look like it has been growing there for years.
 
-4. BIOLOGICAL REALISM:
-   - Ensure ZERO pixels from the reference image leak into the patient's face or background.
-   - Restore the forehead skin with new follicles as indicated by the mask.
-   - The growth flow must follow a natural medical direction (Forward/Swirl).
+4. ANATOMY & FRONTOTEMPORAL DESIGN:
+   - FRONTAL HAIRLINE: Create an irregular, organic, "micro-jagged" line. No straight lines.
+   - TEMPORAL CLOSURE: Populate the frontotemporal corners densely, ensuring they transition smoothly into the side hair.
 
-FINAL OUTPUT: A high-resolution, surgical-grade medical restoration. ${densityLabel} DENSITY. 100% PATIENT IDENTITY. TOTAL REPLACEMENT OF GREEN AREA.`;
+FINAL OUTPUT: A realistic medical simulation. ${densityLabel} DENSITY. PERFECT LIGHTING MATCH. INVISIBLE SEAMS.`;
 
     const ai = new GoogleGenAI({ apiKey });
     const parts: any[] = [];
