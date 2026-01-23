@@ -40,11 +40,22 @@ const HowItWorksModal: React.FC<HowItWorksModalProps> = ({ isOpen, onClose }) =>
                         <div className="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold border border-primary/20">
                             1
                         </div>
-                        <div>
+                        <div className="flex-1">
                             <h3 className="text-lg font-bold text-secondary font-poppins">Upload Your Photo</h3>
                             <p className="text-slate-600 mt-2 leading-relaxed">
                                 Choose a clear, high-resolution photo. For best results, use a <strong>front-facing</strong> or <strong>top-down scalp photo</strong> under good lighting.
                             </p>
+
+                            {/* Step 1 GIF Container */}
+                            <div className="mt-4 w-full aspect-video rounded-xl overflow-hidden border-2 border-slate-100 bg-slate-50 shadow-sm">
+                                <img
+                                    src="/how-it-works/step1.gif"
+                                    alt="Uploading photo demonstration"
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                                />
+                            </div>
+
                             <div className="mt-8 grid grid-cols-2 gap-6">
                                 {/* Incorrect Example */}
                                 <div className="group flex flex-col items-center">
@@ -88,11 +99,22 @@ const HowItWorksModal: React.FC<HowItWorksModalProps> = ({ isOpen, onClose }) =>
                         <div className="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold border border-primary/20">
                             2
                         </div>
-                        <div>
+                        <div className="flex-1">
                             <h3 className="text-lg font-bold text-secondary font-poppins">Draw Your Desired Hairline</h3>
                             <p className="text-slate-600 mt-2 leading-relaxed">
                                 Use the <strong>Surgical Brush</strong> to mark the areas where you want to see hair growth. Our Smart Lasso will automatically fill in the enclosed areas for you.
                             </p>
+
+                            {/* Step 2 GIF Container */}
+                            <div className="mt-4 w-full aspect-video rounded-xl overflow-hidden border-2 border-slate-100 bg-slate-50 shadow-sm">
+                                <img
+                                    src="/how-it-works/step2.gif"
+                                    alt="Drawing hairline demonstration"
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                                />
+                            </div>
+
                             <p className="text-xs text-primary font-bold mt-2 uppercase tracking-wider">Tip: Cover the bald area completely for the most realistic look.</p>
                         </div>
                     </div>
@@ -102,11 +124,21 @@ const HowItWorksModal: React.FC<HowItWorksModalProps> = ({ isOpen, onClose }) =>
                         <div className="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold border border-primary/20">
                             3
                         </div>
-                        <div>
+                        <div className="flex-1">
                             <h3 className="text-lg font-bold text-secondary font-poppins">Choose Graft Density</h3>
                             <p className="text-slate-600 mt-2 leading-relaxed">
                                 Select between <strong>Low, Medium, or High</strong> density. This determines the thickness and volume of the simulated hair follicles.
                             </p>
+
+                            {/* Step 3 GIF Container */}
+                            <div className="mt-4 w-full aspect-video rounded-xl overflow-hidden border-2 border-slate-100 bg-slate-50 shadow-sm">
+                                <img
+                                    src="/how-it-works/step3.gif"
+                                    alt="Choosing density demonstration"
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -115,11 +147,21 @@ const HowItWorksModal: React.FC<HowItWorksModalProps> = ({ isOpen, onClose }) =>
                         <div className="flex-shrink-0 w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center text-primary font-bold border border-primary/20">
                             4
                         </div>
-                        <div>
+                        <div className="flex-1">
                             <h3 className="text-lg font-bold text-secondary font-poppins">Generate AI Reconstruction</h3>
                             <p className="text-slate-600 mt-2 leading-relaxed">
                                 Click <strong>'Generate Preview'</strong>. Our medical-grade AI will analyze your features and provide a realistic hair transplant visualization in seconds.
                             </p>
+
+                            {/* Step 4 GIF Container */}
+                            <div className="mt-4 w-full aspect-video rounded-xl overflow-hidden border-2 border-slate-100 bg-slate-50 shadow-sm">
+                                <img
+                                    src="/how-it-works/step4.gif"
+                                    alt="AI generation demonstration"
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => (e.currentTarget.style.display = 'none')}
+                                />
+                            </div>
                         </div>
                     </div>
 

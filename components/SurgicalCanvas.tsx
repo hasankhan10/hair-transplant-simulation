@@ -194,6 +194,24 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
   return (
     <div className="fixed inset-0 z-[100] bg-slate-900/95 flex flex-col items-center justify-center p-4 md:p-8 overflow-hidden backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl overflow-hidden relative max-w-5xl max-h-full flex flex-col w-full h-full md:h-auto">
+        {/* Top-Right Responsive Visual Guide (Step 2 GIF) - Moved Outside Image Area */}
+        <div className="absolute top-[80px] right-4 z-[110] animate-in fade-in slide-in-from-right-4 duration-500 pointer-events-none">
+          <div className="bg-white p-2 rounded-xl shadow-2xl border border-slate-200 pointer-events-auto max-w-[140px] md:max-w-none transition-all hover:scale-105">
+            <div className="flex items-center gap-2 mb-2 px-1">
+              <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
+              <span className="text-[10px] font-bold text-secondary uppercase tracking-tighter font-poppins">Guide: How to Draw</span>
+            </div>
+            <div className="w-28 md:w-48 aspect-video rounded-lg overflow-hidden border border-slate-100 bg-slate-50">
+              <img
+                src="/how-it-works/step2.gif"
+                alt="How to draw guide"
+                className="w-full h-full object-cover"
+                onError={(e) => (e.currentTarget.parentElement!.parentElement!.style.display = 'none')}
+              />
+            </div>
+          </div>
+        </div>
+
         <div className="p-4 bg-slate-50 border-b border-slate-200 flex flex-wrap gap-4 justify-between items-center shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-3 h-3 bg-primary rounded-full animate-pulse"></div>
