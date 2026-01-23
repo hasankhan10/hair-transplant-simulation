@@ -201,32 +201,30 @@ export const generateHairVisualization = async (
 
     const prompt = `ROLE: MASTER HAIR TRANSPLANT SURGEON.
 
-CRITICAL SECURITY RULE: "ONE-SHOT" CONTEXT ISOLATION.
-- I am providing ONE [MASTER CLINICAL REFERENCE] image. 
-- USE THIS ONLY as a mathematical frequency map for follicle spacing and graft density.
-- DO NOT COPY the skin color, lighting, background, or head shape from the reference.
-- THE PRIMARY PATIENT PHOTO IS THE ONLY SOURCE FOR PIXELS AND IDENTITY.
+MISSION: FULL HAIR RESTORATION PERFORMANCE.
 
-YOUR MISSION:
-1. TARGET DENSITY ANALYSIS (STERILE MASTER REFERENCE):
-   - Analyze the provided ${densityLabel} DENSITY MASTER REFERENCE for graft count per square cm.
-   - Apply that exact graft spacing to the Patient's green mask area.
+1. DATA SOURCE ISOLATION:
+   - [MASTER CLINICAL REFERENCE IMAGE]: Use this ONLY for 'Density Blueprint' (Follicle spacing and hair count per cm²).
+   - [PATIENT PHOTO]: This is the ONLY source for 'Biological DNA'. 
+   - DEFINITION OF DNA: DNA is strictly (Color + Texture + Wave/Curl). 
+   - IGNORE PATIENT CURRENT STATE: Do NOT limit the simulation based on the patient's current baldness, thinness, or short hair length. Simulate a SUCCESSFUL, FULLY GROWN transplant result.
 
-2. BIOLOGICAL DNA PRESERVATION (PATIENT PHOTO):
-   - Replicate the patient's biological DNA (Hair texture, Color, Graying ratio).
-   - Ensure the skin and forehead look exactly like the patient, with ZERO grayish tint from the reference.
+2. EXECUTION COMMANDS:
+   - DENSITY SUPREMACY: Apply the ${densityLabel} DENSITY from the reference image aggressively. Every green pixel MUST be replaced by thick, healthy hair follicles.
+   - TEXTURE MATCHING: Ensure the new hair has the exact color and curl pattern of the patient's donor hair (sides/back).
+   - OPAQUE COVERAGE: Avoid "wispy" or "thin" results. The goal is 100% opaque, consistent coverage within the mask.
 
-3. ANATOMY & FRONTOTEMPORAL RECONSTRUCTION:
-   - FACIAL PROPORTIONS: Evaluate the Three-Tier facial balance.
-   - FRONTOTEMPORAL ANGLE: Populate the corners and temporal recesses with 100% density. NO THINNING AT THE EDGES.
-   - HAIRLINE SOFTNESS: Create a natural, irregular, "micro-jagged" surgical hairline.
+3. ANATOMY & FRONTOTEMPORAL DESIGN:
+   - FACIAL PROPORTIONS: Analyze the face for the perfect, age-appropriate hairline placement.
+   - FRONTOTEMPORAL CORNERS: The recesses (corners of the head) must be densely populated with NO thinning at the edges. Define a strong, youthful temporal angle.
+   - HAIRLINE SOFTNESS: Ensure the front boundary is natural and irregular (micro-jagged), but the area inside is MAXIMALLY dense.
 
-4. EXECUTE THE TRANSPLANT (ZERO-GOSSIP BOUNDARY):
-   - 100% SPATIAL OCCUPANCY: Every single green pixel must be converted into a hair follicle.
-   - ZERO GREEN ARTIFACTS: The bright green must be 100% replaced.
-   - DIRECTIONAL FLOW: Create a natural growth flow matching the patient’s existing whorl and angle.
+4. BIOLOGICAL REALISM:
+   - Ensure ZERO pixels from the reference image leak into the patient's face or background.
+   - Restore the forehead skin with new follicles as indicated by the mask.
+   - The growth flow must follow a natural medical direction (Forward/Swirl).
 
-FINAL OUTPUT: A high-resolution, surgical-grade medical visualization. ${densityLabel} DENSITY. 100% PATIENT IDENTITY. NO REFERENCE LEAKAGE.`;
+FINAL OUTPUT: A high-resolution, surgical-grade medical restoration. ${densityLabel} DENSITY. 100% PATIENT IDENTITY. TOTAL REPLACEMENT OF GREEN AREA.`;
 
     const ai = new GoogleGenAI({ apiKey });
     const parts: any[] = [];
