@@ -189,6 +189,44 @@ export const generateHairVisualization = async (
 
     const densityLabel = params.density === GraftDensity.LOW ? "LOW" : params.density === GraftDensity.MEDIUM ? "MEDIUM" : "HIGH";
 
+    const ai = new GoogleGenAI({ apiKey });
+
+    // 0. ANATOMICAL VALIDATION (GUARDRAIL)
+    // This ensures the AI is only used for intended scalp simulations.
+    const { data: checkData, mimeType: checkMime } = getBase64Data(patientImage);
+
+    try {
+        const validationPrompt = "Analyze this image. Is it a human scalp, human hair, or a human head/face suitable for a hair transplant simulation? Answer ONLY with 'TRUE' if it is, or 'FALSE' if it is anything else (animals, landscapes, objects, etc).";
+        const validationResult = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-image',
+            contents: [{
+                parts: [
+                    { text: validationPrompt },
+                    { inlineData: { data: checkData, mimeType: checkMime } }
+                ]
+            }]
+        });
+
+        // Use the same extraction logic as below for consistency
+        let validationText = "";
+        if (validationResult.candidates?.[0]?.content?.parts) {
+            for (const part of validationResult.candidates[0].content.parts) {
+                if ('text' in part) {
+                    validationText += part.text;
+                }
+            }
+        }
+
+        if (validationText.toUpperCase().includes("FALSE")) {
+            throw new Error("Please upload a clear photo of your scalp/head for simulation, not any other type of image.");
+        }
+    } catch (e: any) {
+        // If it's our specific validation error, rethrow it
+        if (e.message.includes("upload a clear photo")) throw e;
+        // Otherwise (Network error, etc), log and proceed to not block the user
+        console.warn("Validation check failed or skipped:", e);
+    }
+
     // 1. Prepare the contextual image (Patient + Green Mask)
     const aiInputImage = params.mask
         ? await createAIComposition(patientImage, params.mask)
@@ -223,7 +261,7 @@ MISSION: HARMONIOUS SURGICAL RESTORATION.
 
 FINAL OUTPUT: A realistic medical simulation. ${densityLabel} DENSITY. PERFECT LIGHTING MATCH. INVISIBLE SEAMS.`;
 
-    const ai = new GoogleGenAI({ apiKey });
+    // AI Generation
     const parts: any[] = [];
 
     // Add Master Reference first (Context)
