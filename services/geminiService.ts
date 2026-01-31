@@ -248,7 +248,6 @@ MISSION: HARMONIOUS SURGICAL RESTORATION.
 
 2. DENSITY MAPPING (MASTER REFERENCE):
    - [MASTER CLINICAL REFERENCE]: Use this as your primary frequency standard for follicle count.
-   - CONSERVATIVE OFFSET: Generate exactly **10% LESS DENSITY** than what is visible in the reference image. This 10% reduction ensures a more natural, realistic clinical result that avoids an "artificial wig" look.
    - OPAQUE CORE, SOFT EDGES: The center of the mask should follow this slightly reduced standard, while the perimeter must be soft and tapered.
 
 3. IDENTITY PRESERVATION:
