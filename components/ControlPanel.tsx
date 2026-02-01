@@ -148,18 +148,26 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               onChange={handleDensityChange}
               className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
             />
-            <div className="flex justify-between mt-3">
-              {densityLevels.map((level, idx) => (
-                <div
-                  key={level.label}
-                  className={`flex flex-col items-center flex-1 ${idx === 0 ? 'items-start' : idx === 2 ? 'items-end' : ''}`}
-                >
-                  <div className={`w-0.5 h-1.5 rounded-full mb-1 ${currentDensityIndex === idx ? 'bg-primary' : 'bg-slate-300'}`} />
-                  <span className={`text-xs font-bold uppercase ${currentDensityIndex === idx ? 'text-primary' : 'text-slate-400'} font-poppins`}>
-                    {level.label}
-                  </span>
-                </div>
-              ))}
+            {/* Alignment-Corrected Labels Container */}
+            <div className="relative mt-3 h-10 w-full">
+              {densityLevels.map((level, idx) => {
+                const isSelected = currentDensityIndex === idx;
+                // Position logic: 0% for Low, 50% for Medium, 100% for High
+                const positionStyle = idx === 0 ? 'left-0' : idx === 1 ? 'left-1/2 -translate-x-1/2' : 'right-0';
+
+                return (
+                  <div
+                    key={level.label}
+                    className={`absolute ${positionStyle} flex flex-col items-center transition-colors duration-300`}
+                    style={{ width: idx === 1 ? 'auto' : '1px', overflow: 'visible' }} // 1px width for ends ensures center is at edge
+                  >
+                    <div className={`w-0.5 h-1.5 rounded-full mb-1 ${isSelected ? 'bg-primary' : 'bg-slate-300'}`} />
+                    <span className={`text-[11px] font-bold uppercase whitespace-nowrap tracking-tighter font-poppins ${isSelected ? 'text-primary' : 'text-slate-400'}`}>
+                      {level.label}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

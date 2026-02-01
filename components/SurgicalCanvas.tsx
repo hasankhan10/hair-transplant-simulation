@@ -17,6 +17,51 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
   const [history, setHistory] = useState<ImageData[]>([]);
   const [historyIndex, setHistoryIndex] = useState(-1);
 
+  // Draggable Guide Logic
+  const [guidePos, setGuidePos] = useState({ x: 0, y: 0 });
+  const [isDraggingGuide, setIsDraggingGuide] = useState(false);
+  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+
+  const handleGuideStart = (e: React.MouseEvent | React.TouchEvent) => {
+    setIsDraggingGuide(true);
+    const clientX = 'touches' in e ? e.touches[0].clientX : e.clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : e.clientY;
+    setDragStart({
+      x: clientX - guidePos.x,
+      y: clientY - guidePos.y
+    });
+  };
+
+  const handleGlobalMove = useCallback((e: MouseEvent | TouchEvent) => {
+    if (!isDraggingGuide) return;
+    const clientX = 'touches' in e ? e.touches[0].clientX : (e as MouseEvent).clientX;
+    const clientY = 'touches' in e ? e.touches[0].clientY : (e as MouseEvent).clientY;
+
+    setGuidePos({
+      x: clientX - dragStart.x,
+      y: clientY - dragStart.y
+    });
+  }, [isDraggingGuide, dragStart]);
+
+  const handleGlobalEnd = useCallback(() => {
+    setIsDraggingGuide(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDraggingGuide) {
+      window.addEventListener('mousemove', handleGlobalMove);
+      window.addEventListener('mouseup', handleGlobalEnd);
+      window.addEventListener('touchmove', handleGlobalMove, { passive: false });
+      window.addEventListener('touchend', handleGlobalEnd);
+    }
+    return () => {
+      window.removeEventListener('mousemove', handleGlobalMove);
+      window.removeEventListener('mouseup', handleGlobalEnd);
+      window.removeEventListener('touchmove', handleGlobalMove);
+      window.removeEventListener('touchend', handleGlobalEnd);
+    };
+  }, [isDraggingGuide, handleGlobalMove, handleGlobalEnd]);
+
   // Helper to apply brush styles to the canvas context
   const updateBrushStyle = useCallback(() => {
     const canvas = canvasRef.current;
@@ -194,9 +239,16 @@ const SurgicalCanvas: React.FC<SurgicalCanvasProps> = ({ image, onSave, onCancel
   return (
     <div className="fixed inset-0 z-[100] bg-slate-900/95 flex flex-col items-center justify-center p-4 md:p-8 overflow-hidden backdrop-blur-sm">
       <div className="bg-white rounded-2xl shadow-2xl overflow-hidden relative max-w-5xl max-h-full flex flex-col w-full h-full md:h-auto">
-        {/* Top-Right Responsive Visual Guide (Step 2 GIF) - Moved Outside Image Area */}
-        <div className="absolute top-[80px] right-4 z-[110] animate-in fade-in slide-in-from-right-4 duration-500 pointer-events-none">
-          <div className="bg-white p-2 rounded-xl shadow-2xl border border-slate-200 pointer-events-auto max-w-[140px] md:max-w-none transition-all hover:scale-105">
+        {/* Draggable Top-Right Responsive Visual Guide (Step 2 GIF) */}
+        <div
+          className="absolute top-[80px] right-4 z-[110] animate-in fade-in slide-in-from-right-4 duration-500 pointer-events-none"
+          style={{ transform: `translate(${guidePos.x}px, ${guidePos.y}px)` }}
+        >
+          <div
+            onMouseDown={handleGuideStart}
+            onTouchStart={handleGuideStart}
+            className={`bg-white p-2 rounded-xl shadow-2xl border border-slate-200 pointer-events-auto max-w-[140px] md:max-w-none transition-shadow cursor-move active:scale-95 ${isDraggingGuide ? 'shadow-primary/20 border-primary/30 ring-2 ring-primary/10' : 'hover:scale-105'}`}
+          >
             <div className="flex items-center gap-2 mb-2 px-1">
               <div className="w-2 h-2 bg-primary rounded-full animate-pulse"></div>
               <span className="text-[10px] font-bold text-secondary uppercase tracking-tighter font-poppins">Guide: How to Draw</span>

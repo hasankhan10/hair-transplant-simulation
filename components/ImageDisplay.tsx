@@ -161,8 +161,10 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
                 <div className="relative bg-white rounded-xl shadow-md border border-slate-200 overflow-hidden group max-w-full">
                   <span className="absolute top-3 left-3 bg-black/70 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest z-10 backdrop-blur-md border border-white/10">Before</span>
                   <div className="relative">
-                    <img src={beforeImage || ''} alt="Original" className="max-h-[350px] md:max-h-[500px] w-auto block object-contain bg-slate-50" />
-                    {currentMask && !result && (
+                    {beforeImage && (
+                      <img src={beforeImage} alt="Original" className="max-h-[350px] md:max-h-[500px] w-auto block object-contain bg-slate-50" />
+                    )}
+                    {currentMask && !result && beforeImage && (
                       <img src={currentMask} alt="Mask Overlay" className="absolute inset-0 w-full h-full object-contain pointer-events-none opacity-70" />
                     )}
                   </div>
@@ -223,9 +225,13 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
             <div className="relative bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden max-w-2xl">
               <span className="absolute top-4 left-4 bg-black/70 text-white text-sm font-bold px-4 py-1.5 rounded-full uppercase tracking-widest z-10 backdrop-blur-md border border-white/10">Original Patient Photo</span>
               <div className="relative">
-                <img src={beforeImage || ''} alt="Full Original" className="max-h-[600px] w-auto block bg-slate-50" />
-                {currentMask && !result && (
-                  <img src={currentMask} alt="Mask Overlay" className="absolute inset-0 w-full h-full pointer-events-none opacity-50" />
+                {beforeImage && (
+                  <>
+                    <img src={beforeImage} alt="Full Original" className="max-h-[600px] w-auto block bg-slate-50" />
+                    {currentMask && !result && (
+                      <img src={currentMask} alt="Mask Overlay" className="absolute inset-0 w-full h-full pointer-events-none opacity-50" />
+                    )}
+                  </>
                 )}
               </div>
             </div>

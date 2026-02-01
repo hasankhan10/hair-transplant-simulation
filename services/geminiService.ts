@@ -178,137 +178,34 @@ const getMasterReference = async (density: GraftDensity): Promise<{ data: string
 };
 
 /**
- * Generates a medical hair visualization using Gemini API with ONE Master Reference
+ * Generates a medical hair visualization by calling the Backend API
  */
 export const generateHairVisualization = async (
     patientImage: string,
     params: VisualizationParams
 ): Promise<string> => {
-    const apiKey = process.env.GEMINI_API_KEY;
-    if (!apiKey) throw new Error("API Key not found");
-
-    const densityLabel = params.density === GraftDensity.LOW ? "LOW" : params.density === GraftDensity.MEDIUM ? "MEDIUM" : "HIGH";
-
-    const ai = new GoogleGenAI({ apiKey });
-
-    // 0. ANATOMICAL VALIDATION (GUARDRAIL)
-    // This ensures the AI is only used for intended scalp simulations.
-    const { data: checkData, mimeType: checkMime } = getBase64Data(patientImage);
-
     try {
-        const validationPrompt = "Analyze this image. Is it a human scalp, human hair, or a human head/face suitable for a hair transplant simulation? Answer ONLY with 'TRUE' if it is, or 'FALSE' if it is anything else (animals, landscapes, objects, etc).";
-        const validationResult = await ai.models.generateContent({
-            model: 'gemini-2.5-flash-image',
-            contents: [{
-                parts: [
-                    { text: validationPrompt },
-                    { inlineData: { data: checkData, mimeType: checkMime } }
-                ]
-            }]
+        const response = await fetch('/api/v1/simulate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                patientImage,
+                mask: params.mask,
+                density: params.density
+            })
         });
 
-        // Use the same extraction logic as below for consistency
-        let validationText = "";
-        if (validationResult.candidates?.[0]?.content?.parts) {
-            for (const part of validationResult.candidates[0].content.parts) {
-                if ('text' in part) {
-                    validationText += part.text;
-                }
-            }
+        const data = await response.json();
+
+        if (!data.success) {
+            throw new Error(data.error || "Failed to generate simulation");
         }
 
-        if (validationText.toUpperCase().includes("FALSE")) {
-            throw new Error("Please upload a clear photo of your scalp/head for simulation, not any other type of image.");
-        }
-    } catch (e: any) {
-        // If it's our specific validation error, rethrow it
-        if (e.message.includes("upload a clear photo")) throw e;
-        // Otherwise (Network error, etc), log and proceed to not block the user
-        console.warn("Validation check failed or skipped:", e);
+        return data.resultImage;
+    } catch (error: any) {
+        console.error("Simulation failed:", error);
+        throw error;
     }
-
-    // 1. Prepare the contextual image (Patient + Green Mask)
-    const aiInputImage = params.mask
-        ? await createAIComposition(patientImage, params.mask)
-        : patientImage;
-
-    const { data: patientBase64, mimeType: patientMime } = getBase64Data(aiInputImage);
-
-    // 2. Fetch the Master Reference Image
-    const masterRef = await getMasterReference(params.density);
-
-    const prompt = `ROLE: MEDICAL HAIR VISUALIZATION SPECIALIST.
-
-MISSION: HARMONIOUS SURGICAL RESTORATION.
-
-1. BIOLOGICAL HARMONY (PRIORITY #1):
-   - LIGHTING INTEGRATION: Analyze the light source, shadows, and highlights of the patient's photo. Apply the EXACT same lighting to the new hair so it melts into the donor hair perfectly.
-   - NATURAL HANDSHAKE: Do not create a "box" or "patch". Taper the density at the mask edges to blend seamlessly with the patient's real hair.
-   - DIRECTIONAL FLOW: Follow the patient's natural hair direction (forward at forehead, swirl at crown) with 100% precision.
-
-2. DENSITY MAPPING (MASTER REFERENCE):
-   - [MASTER CLINICAL REFERENCE]: Use this as your primary frequency standard for follicle count.
-   - OPAQUE CORE, SOFT EDGES: The center of the mask should follow this slightly reduced standard, while the perimeter must be soft and tapered.
-
-3. IDENTITY PRESERVATION:
-   - [PATIENT PHOTO] is the exclusive source for DNA (Color + Texture + Wave).
-   - IGNORE CURRENT THINNING: Restore the area as a successful, fully-grown result. The new hair should look like it has been growing there for years.
-
-4. ANATOMY & FRONTOTEMPORAL DESIGN:
-   - FRONTAL HAIRLINE: Create an irregular, organic, "micro-jagged" line. No straight lines.
-   - TEMPORAL CLOSURE: Populate the frontotemporal corners densely, ensuring they transition smoothly into the side hair.
-
-FINAL OUTPUT: A realistic medical simulation. ${densityLabel} DENSITY. PERFECT LIGHTING MATCH. INVISIBLE SEAMS.`;
-
-    // AI Generation
-    const parts: any[] = [];
-
-    // Add Master Reference first (Context)
-    if (masterRef) {
-        parts.push({ text: "[MASTER CLINICAL DENSITY REFERENCE - FOR DATA ONLY]" });
-        parts.push({
-            inlineData: {
-                data: masterRef.data,
-                mimeType: masterRef.mimeType
-            }
-        });
-    }
-
-    // Add Patient (Identity)
-    parts.push({ text: "[PRIMARY PATIENT PHOTO - USE THIS FOR ALL PIXELS AND IDENTITY]" });
-    parts.push({
-        inlineData: {
-            data: patientBase64,
-            mimeType: patientMime
-        }
-    });
-
-    // Add Command
-    parts.push({ text: prompt });
-
-    const response = await ai.models.generateContent({
-        model: MODEL_NAME,
-        contents: [{ parts }],
-    });
-
-    let resultImageUrl = '';
-    if (response.candidates?.[0]?.content?.parts) {
-        for (const part of response.candidates[0].content.parts) {
-            if (part.inlineData) {
-                resultImageUrl = `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-                break;
-            }
-        }
-    }
-
-    if (!resultImageUrl) {
-        throw new Error("AI failed to generate a new look. Please try a different angle.");
-    }
-
-    // 3. CLEAN UP: Composite result back onto original
-    if (params.mask) {
-        return await compositeStrictResult(patientImage, resultImageUrl, params.mask);
-    }
-
-    return resultImageUrl;
 };
