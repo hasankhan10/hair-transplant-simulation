@@ -248,15 +248,29 @@ FINAL OUTPUT: A realistic medical simulation. ${densityLabel} DENSITY. PERFECT L
     }
 });
 
+// Health check for public API validation
+app.get('/api/health', (req, res) => {
+    res.json({ success: true, message: "Hair Simulation API is live" });
+});
+
 // Serve static assets from front-end build (for production)
-const distPath = path.join(__dirname, '../dist');
+const distPath = path.resolve(__dirname, '../dist');
 app.use(express.static(distPath));
 
-// Handle SPAs - Send index.html for any unknown routes
-app.use((req, res) => {
+// Handle SPAs - Only catch GET requests that are NOT API calls
+app.get('*', (req, res, next) => {
+    // If it looks like an API call, don't serve index.html, let it 404 or fail as JSON
+    if (req.path.startsWith('/api')) {
+        return next();
+    }
     res.sendFile(path.join(distPath, 'index.html'));
 });
 
-app.listen(PORT, () => {
+// Global 404 for API
+app.use('/api/*', (req, res) => {
+    res.status(404).json({ success: false, error: `API route not found: ${req.originalUrl}` });
+});
+
+app.listen(Number(PORT), '0.0.0.0', () => {
     console.log(`Server running smoothly on port ${PORT}`);
 });
