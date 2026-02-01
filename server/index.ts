@@ -258,16 +258,15 @@ const distPath = path.resolve(__dirname, '../dist');
 app.use(express.static(distPath));
 
 // Handle SPAs - Only catch GET requests that are NOT API calls
-app.get('*', (req, res, next) => {
-    // If it looks like an API call, don't serve index.html, let it 404 or fail as JSON
-    if (req.path.startsWith('/api')) {
-        return next();
+app.use((req, res, next) => {
+    if (req.method === 'GET' && !req.path.startsWith('/api')) {
+        return res.sendFile(path.join(distPath, 'index.html'));
     }
-    res.sendFile(path.join(distPath, 'index.html'));
+    next();
 });
 
 // Global 404 for API
-app.use('/api/*', (req, res) => {
+app.use('/api', (req, res) => {
     res.status(404).json({ success: false, error: `API route not found: ${req.originalUrl}` });
 });
 
