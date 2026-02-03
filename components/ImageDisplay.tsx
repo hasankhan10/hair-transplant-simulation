@@ -29,10 +29,112 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
   status
 }) => {
   const [activeTab, setActiveTab] = useState<'comparison' | 'result' | 'original'>('comparison');
+  const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleDownload = async () => {
+    if (!beforeImage || !result) return;
+    setIsDownloading(true);
+
+    try {
+      const loadImg = (src: string): Promise<HTMLImageElement> => {
+        return new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = () => resolve(img);
+          img.onerror = reject;
+          img.src = src;
+        });
+      };
+
+      const [imgBefore, imgAfter, logo] = await Promise.all([
+        loadImg(beforeImage),
+        loadImg(result.afterImage),
+        loadImg('/logo_white.png').catch(() => null)
+      ]);
+
+      // Calculate canvas size (consistent height)
+      const targetHeight = 800;
+      const ratioBefore = imgBefore.width / imgBefore.height;
+      const ratioAfter = imgAfter.width / imgAfter.height;
+      const widthBefore = targetHeight * ratioBefore;
+      const widthAfter = targetHeight * ratioAfter;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = widthBefore + widthAfter;
+      canvas.height = targetHeight + 100; // Extra space for labels/branding
+      const ctx = canvas.getContext('2d');
+
+      if (!ctx) return;
+
+      // Fill Background
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Draw Images
+      ctx.drawImage(imgBefore, 0, 0, widthBefore, targetHeight);
+      ctx.drawImage(imgAfter, widthBefore, 0, widthAfter, targetHeight);
+
+      // Draw Labels
+      ctx.fillStyle = '#000000';
+      ctx.font = 'bold 30px Montserrat, sans-serif';
+      ctx.textAlign = 'center';
+
+      // Before Label
+      ctx.fillText('BEFORE', widthBefore / 2, targetHeight + 50);
+
+      // After Label
+      ctx.fillText('AFTER', widthBefore + (widthAfter / 2), targetHeight + 60);
+
+      // --- WATERMARK OVERLAY (Bottom Right of Image) ---
+      const padding = 20;
+      const logoH = 35;
+      const logoW = logo ? (logo.width / logo.height) * logoH : 0;
+      const brandBoxW = Math.max(logoW + 180, 240);
+      const brandBoxH = 50;
+
+      // Translucent background for watermark
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
+      ctx.beginPath();
+      ctx.roundRect(canvas.width - brandBoxW - padding, targetHeight - brandBoxH - padding, brandBoxW, brandBoxH, 8);
+      ctx.fill();
+
+      // Draw Logo
+      if (logo) {
+        ctx.drawImage(logo, canvas.width - brandBoxW - padding + 12, targetHeight - brandBoxH - padding + 7, logoW, logoH);
+      }
+
+      // Draw Brand Text
+      ctx.fillStyle = '#FFFFFF';
+      ctx.textAlign = 'left';
+      ctx.font = 'bold 15px Montserrat, sans-serif';
+      ctx.fillText("Dr Paul's", canvas.width - brandBoxW - padding + (logoW ? logoW + 22 : 15), targetHeight - brandBoxH - padding + 22);
+      ctx.font = '500 11px Montserrat, sans-serif';
+      ctx.fillText("Hair Transplant Simulation", canvas.width - brandBoxW - padding + (logoW ? logoW + 22 : 15), targetHeight - brandBoxH - padding + 38);
+
+      // Trigger Download
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
+      const link = document.createElement('a');
+      link.download = `dr-paul-simulation-${Date.now()}.jpg`;
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error("Download failed:", err);
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   if (!beforeImage && !isProcessing && !result) {
     return (
-      <div className="bg-white rounded-2xl clinical-shadow border border-slate-100 flex flex-col items-center justify-center p-12 min-h-[600px] text-center">
+      <div className="bg-white rounded-2xl clinical-shadow border border-slate-100 flex flex-col items-center justify-center p-12 min-h-[600px] text-center relative">
+        {error && (
+          <div className="absolute top-4 left-4 right-4 z-20 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center animate-in fade-in slide-in-from-top-2">
+            <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+            <span className="text-base font-medium">{error}</span>
+          </div>
+        )}
         <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-6">
           <svg className="w-10 h-10 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
@@ -196,8 +298,49 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
             </div>
 
             {result && (
-              <div className="text-center mt-2 animate-in fade-in slide-in-from-bottom-2 duration-700">
-                <p className="text-xs md:text-sm font-medium text-slate-600 italic">
+              <div className="mt-6 flex flex-col items-center gap-4">
+                {/* Premium Booking CTA Card */}
+                <div className="w-full max-w-lg bg-white p-6 rounded-2xl shadow-xl border border-primary/10 flex flex-col md:flex-row items-center justify-between gap-6 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                      <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 00-2 2z" />
+                      </svg>
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-bold text-secondary font-poppins">Ready for the real thing?</h4>
+                      <p className="text-sm text-slate-500 font-medium">Want to book a consultation?</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => window.open(`https://wa.me/919147714312?text=${encodeURIComponent("I see my Transplantation simulation and I am happy to book a consultation with you")}`, '_blank')}
+                    className="w-full md:w-auto px-6 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/30 hover:bg-primary/90 hover:-translate-y-0.5 transition active:scale-95 whitespace-nowrap font-poppins text-sm uppercase tracking-wider"
+                  >
+                    Book Consultation
+                  </button>
+                </div>
+
+                <div className="flex flex-wrap items-center justify-center gap-4 mt-2">
+                  <button
+                    onClick={handleDownload}
+                    disabled={isDownloading}
+                    className="flex items-center gap-2 px-6 py-3 bg-slate-800 text-white font-bold rounded-xl shadow-lg border border-slate-700 hover:bg-slate-700 transition active:scale-95 font-poppins text-sm uppercase tracking-wider"
+                  >
+                    {isDownloading ? (
+                      <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    ) : (
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                      </svg>
+                    )}
+                    {isDownloading ? 'Saving...' : 'Download Comparison'}
+                  </button>
+                </div>
+
+                <p className="text-xs md:text-sm font-medium text-slate-500 italic">
                   Note: If you don't get this result as expected then please try a different angle or look.
                 </p>
               </div>
@@ -206,14 +349,56 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
         )}
 
         {activeTab === 'result' && result && (
-          <div className="w-full h-full flex flex-col items-center justify-center gap-4">
-            <div className="relative max-w-2xl w-full bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden">
+          <div className="w-full h-full flex flex-col items-center justify-center gap-6 p-4">
+            <div className="relative max-w-2xl w-full bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden group">
               <span className="absolute top-4 left-4 bg-primary text-white text-sm font-bold px-3 py-1.5 rounded-full uppercase tracking-widest z-10 shadow-lg font-poppins">AI Preview</span>
               <img src={result.afterImage} alt="Full Result" className="w-full object-contain bg-slate-50" />
               <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-6 text-white text-base">
                 <p className="font-semibold italic">"AI-generated preview. Actual results may vary."</p>
               </div>
             </div>
+
+            {/* Premium Booking CTA Card (Result Tab) */}
+            <div className="w-full max-w-2xl bg-white p-6 rounded-2xl shadow-xl border border-primary/10 flex flex-col md:flex-row items-center justify-between gap-6 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+              <div className="flex items-center gap-4">
+                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
+                  <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 00-2 2z" />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-lg font-bold text-secondary font-poppins">Ready for the real thing?</h4>
+                  <p className="text-sm text-slate-500 font-medium">Want to book a consultation?</p>
+                </div>
+              </div>
+              <button
+                onClick={() => window.open(`https://wa.me/919147714312?text=${encodeURIComponent("I see my Transplantation simulation and I am happy to book a consultation with you.")}`, '_blank')}
+                className="w-full md:w-auto px-6 py-3 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/30 hover:bg-primary/90 hover:-translate-y-0.5 transition active:scale-95 whitespace-nowrap font-poppins text-sm uppercase tracking-wider"
+              >
+                Book Consultation
+              </button>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-center gap-4">
+              <button
+                onClick={handleDownload}
+                disabled={isDownloading}
+                className="flex items-center gap-2 px-6 py-3 bg-slate-800 text-white font-bold rounded-xl shadow-lg border border-slate-700 hover:bg-slate-700 transition active:scale-95 font-poppins text-sm uppercase tracking-wider"
+              >
+                {isDownloading ? (
+                  <svg className="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                ) : (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                )}
+                {isDownloading ? 'Saving...' : 'Download Comparison'}
+              </button>
+            </div>
+
             <p className="text-xs md:text-sm font-medium text-slate-400 italic text-center max-w-md px-6">
               If you don't get this result as expected then please try a different angle or look.
             </p>

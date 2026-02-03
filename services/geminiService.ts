@@ -178,6 +178,26 @@ const getMasterReference = async (density: GraftDensity): Promise<{ data: string
 };
 
 /**
+ * Validates if the uploaded image is a human scalp/head using the Backend API
+ */
+export const validateScalpImage = async (patientImage: string): Promise<{ success: boolean; error?: string }> => {
+    try {
+        const response = await fetch('/api/v1/validate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ patientImage })
+        });
+
+        return await response.json();
+    } catch (error: any) {
+        console.error("Validation failed:", error);
+        return { success: false, error: "Validation service temporarily unavailable." };
+    }
+};
+
+/**
  * Generates a medical hair visualization by calling the Backend API
  */
 export const generateHairVisualization = async (

@@ -14,7 +14,7 @@ import ImageDisplay from './components/ImageDisplay';
 import Header from './components/Header';
 import HowItWorksModal from './components/HowItWorksModal';
 import { autoCropToHead } from './services/imageProcessor';
-import { generateHairVisualization } from './services/geminiService';
+import { generateHairVisualization, validateScalpImage } from './services/geminiService';
 
 const App: React.FC = () => {
   const [patientImage, setPatientImage] = useState<string | null>(null);
@@ -30,18 +30,41 @@ const App: React.FC = () => {
 
   const handleImageUpload = async (imageData: string) => {
     setIsProcessing(true);
+    setError(null);
+    setProcessingProgress(10);
+    setProcessingStatus('Normalizing Photo...');
+
     try {
-      // Normalize image while preserving original framing
+      // 1. Normalize image while preserving original framing
       const processedImage = await autoCropToHead(imageData);
+
+      // 2. IMMEDIATE ANATOMICAL VALIDATION
+      setProcessingStatus('Verifying Scalp/Head Accuracy...');
+      setProcessingProgress(50);
+
+      const validation = await validateScalpImage(processedImage);
+
+      if (!validation.success) {
+        setError(validation.error || "Please upload a clear photo of your scalp/head for simulation.");
+        setPatientImage(null);
+        return;
+      }
+
       setPatientImage(processedImage);
       setResult(null);
       setError(null);
       setParams(prev => ({ ...prev, mask: undefined }));
-    } catch (err) {
-      console.error("Clinical normalization failed:", err);
-      setPatientImage(imageData); // Fallback to original
+    } catch (err: any) {
+      console.error("Upload/Validation failed:", err);
+      setError(err.message || "An error occurred during medical validation.");
+      setPatientImage(null);
     } finally {
-      setIsProcessing(false);
+      setProcessingProgress(100);
+      setTimeout(() => {
+        setIsProcessing(false);
+        setProcessingProgress(0);
+        setProcessingStatus('');
+      }, 500);
     }
   };
 
@@ -144,7 +167,7 @@ const App: React.FC = () => {
       <footer className="bg-white border-t border-slate-200 py-6 mt-auto">
         <div className="container mx-auto px-4 text-center">
           <p className="text-slate-500 text-base">
-            &copy; {new Date().getFullYear()} Hair Transplant Simulation.
+            &copy; {new Date().getFullYear()} Dr Paul's Hair Transplant Simulation.
           </p>
           <p className="text-slate-400 text-sm mt-2 italic">
             "AI-generated preview. Results may vary." Developed by <a target="_blank" className="text-primary hover:underline font-bold" href="http://www.stovamedia.in">Stova Media</a>

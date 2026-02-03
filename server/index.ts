@@ -82,6 +82,50 @@ async function compositeStrictResultServer(
         .toBuffer();
 }
 
+app.post('/api/v1/validate', async (req, res) => {
+    try {
+        const { patientImage, apiKey: providedKey } = req.body;
+        const apiKey = process.env.GEMINI_API_KEY || providedKey;
+
+        if (!apiKey) {
+            return res.status(401).json({ success: false, error: "API Key not found" });
+        }
+
+        const ai = new GoogleGenAI({ apiKey });
+        const { data: patientBase64, mimeType: patientMime } = getBase64Data(patientImage);
+
+        const validationPrompt = "Analyze this image. Is it a human scalp, human hair, or a human head/face suitable for a hair transplant simulation? Answer ONLY with 'TRUE' if it is, or 'FALSE' if it is anything else (animals, landscapes, objects, etc).";
+        const validationResult = await ai.models.generateContent({
+            model: MODEL_NAME,
+            contents: [{
+                parts: [
+                    { text: validationPrompt },
+                    { inlineData: { data: patientBase64, mimeType: patientMime } }
+                ]
+            }]
+        });
+
+        let validationText = "";
+        if (validationResult.candidates?.[0]?.content?.parts) {
+            for (const part of validationResult.candidates[0].content.parts) {
+                if ('text' in part) validationText += part.text;
+            }
+        }
+
+        if (validationText.toUpperCase().includes("FALSE")) {
+            return res.json({
+                success: false,
+                error: "Please upload a clear photo of your scalp/head for simulation, not any other type of image."
+            });
+        }
+
+        return res.json({ success: true });
+    } catch (error: any) {
+        console.error("Validation Error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 app.post('/api/v1/simulate', async (req, res) => {
     try {
         const { patientImage, mask, density, apiKey: providedKey } = req.body;
@@ -96,7 +140,7 @@ app.post('/api/v1/simulate', async (req, res) => {
         const ai = new GoogleGenAI({ apiKey });
         const { data: patientBase64, mimeType: patientMime } = getBase64Data(patientImage);
 
-        // --- 1. ANATOMICAL VALIDATION ---
+        // --- 1. ANATOMICAL VALIDATION (Redundant check for API security) ---
         const validationPrompt = "Analyze this image. Is it a human scalp, human hair, or a human head/face suitable for a hair transplant simulation? Answer ONLY with 'TRUE' if it is, or 'FALSE' if it is anything else (animals, landscapes, objects, etc).";
         const validationResult = await ai.models.generateContent({
             model: MODEL_NAME,
