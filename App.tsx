@@ -28,26 +28,47 @@ const App: React.FC = () => {
     density: GraftDensity.MEDIUM
   });
 
-  const handleImageUpload = async (imageData: string) => {
+  // Proactive Camera Permission Request (Pre-warmer)
+  React.useEffect(() => {
+    const prewarmCamera = async () => {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+      if (isMobile) {
+        try {
+          // Attempt to pre-request permission without keeping the stream open
+          const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+          stream.getTracks().forEach(track => track.stop());
+          console.log("Camera permission pre-granted");
+        } catch (err) {
+          console.warn("Camera pre-grant failed or denied:", err);
+        }
+      }
+    };
+    prewarmCamera();
+  }, []);
+
+  const handleImageUpload = async (imageData: string, isVerified: boolean = false) => {
     setIsProcessing(true);
     setError(null);
     setProcessingProgress(10);
     setProcessingStatus('Normalizing Photo...');
 
     try {
-      // 1. Normalize image while preserving original framing
-      const processedImage = await autoCropToHead(imageData);
+      let processedImage = imageData;
 
-      // 2. IMMEDIATE ANATOMICAL VALIDATION
-      setProcessingStatus('Verifying Scalp/Head Accuracy...');
-      setProcessingProgress(50);
+      if (!isVerified) {
+        // Only normalize and validate if NOT already verified by Smart Camera
+        processedImage = await autoCropToHead(imageData);
 
-      const validation = await validateScalpImage(processedImage);
+        setProcessingStatus('Verifying Scalp/Head Accuracy...');
+        setProcessingProgress(50);
 
-      if (!validation.success) {
-        setError(validation.error || "Please upload a clear photo of your scalp/head for simulation.");
-        setPatientImage(null);
-        return;
+        const validation = await validateScalpImage(processedImage);
+
+        if (!validation.success) {
+          setError(validation.error || "Please upload a clear photo of your scalp/head for simulation.");
+          setPatientImage(null);
+          return;
+        }
       }
 
       setPatientImage(processedImage);

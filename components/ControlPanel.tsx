@@ -1,11 +1,11 @@
-
-import React, { useRef } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { HairLossCategory, HairType, Ethnicity, HairLossArea, GraftDensity, VisualizationParams } from '../types';
+import SmartCamera from './SmartCamera';
 
 interface ControlPanelProps {
   params: VisualizationParams;
   setParams: React.Dispatch<React.SetStateAction<VisualizationParams>>;
-  onUpload: (imageData: string) => void;
+  onUpload: (imageData: string, isVerified?: boolean) => void;
   onRun: () => void;
   onReset: () => void;
   onStartMapping: () => void;
@@ -24,6 +24,16 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   hasImage
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [showUploadOptions, setShowUploadOptions] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+    };
+    checkMobile();
+  }, []);
 
   const densityLevels = [
     { label: 'Low', value: GraftDensity.LOW, metric: 'Conservative' },
@@ -44,10 +54,17 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
       };
       reader.readAsDataURL(file);
     }
-
-    // Reset the input value so the change event fires even if the same file is selected again
     if (e.target) {
       e.target.value = '';
+    }
+    setShowUploadOptions(false);
+  };
+
+  const handleUploadClick = () => {
+    if (isMobile) {
+      setShowUploadOptions(true);
+    } else {
+      fileInputRef.current?.click();
     }
   };
 
@@ -87,14 +104,17 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         </div>
         {!hasImage ? (
           <button
-            onClick={() => fileInputRef.current?.click()}
+            onClick={handleUploadClick}
             className="w-full flex flex-col items-center justify-center border-2 border-dashed border-slate-300 rounded-lg py-12 px-4 transition hover:border-primary hover:bg-primary/5 group"
           >
-            <svg className="w-10 h-10 text-slate-400 mb-2 group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <span className="text-base font-medium text-slate-600 group-hover:text-primary">Click to Upload Photo</span>
-            <span className="text-sm text-slate-400 mt-1">Selfie or headshot</span>
+            <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-4 group-hover:bg-primary/10 transition">
+              <svg className="w-6 h-6 text-slate-400 group-hover:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </div>
+            <span className="text-base font-bold text-slate-700 group-hover:text-primary font-poppins">Capture Your Photo</span>
+            <span className="text-sm text-slate-400 mt-1 uppercase tracking-widest text-[10px] font-black">AI-Ready Selfie Recommended</span>
           </button>
         ) : (
           <div className="flex flex-col space-y-3">
@@ -211,6 +231,67 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
           </p>
         </div>
       </div>
+
+      {/* Action Choice Modal (Mobile) */}
+      {showUploadOptions && (
+        <div className="fixed inset-0 z-[110] flex items-end justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowUploadOptions(false)}>
+          <div className="w-full max-w-sm bg-white rounded-t-3xl p-6 animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+            <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6" />
+            <h4 className="text-lg font-bold text-secondary mb-4 font-poppins text-center">Select Photo Method</h4>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => { setShowCamera(true); setShowUploadOptions(false); }}
+                className="w-full flex items-center p-4 bg-primary/5 rounded-2xl border border-primary/20 hover:bg-primary/10 transition group"
+              >
+                <div className="w-12 h-12 bg-primary rounded-xl flex items-center justify-center mr-4 text-white">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <span className="block font-bold text-secondary font-poppins">Smart AI Camera</span>
+                  <span className="text-xs text-slate-500">Auto-detects scalp/face</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => { fileInputRef.current?.click(); }}
+                className="w-full flex items-center p-4 bg-slate-50 rounded-2xl border border-slate-200 hover:bg-slate-100 transition"
+              >
+                <div className="w-12 h-12 bg-slate-800 rounded-xl flex items-center justify-center mr-4 text-white">
+                  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                </div>
+                <div className="text-left">
+                  <span className="block font-bold text-secondary font-poppins">Upload from Gallery</span>
+                  <span className="text-xs text-slate-500">Choose existing photo</span>
+                </div>
+              </button>
+
+              <button
+                onClick={() => setShowUploadOptions(false)}
+                className="w-full py-3 text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-2"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Smart Camera Transition */}
+      {showCamera && (
+        <SmartCamera
+          onCapture={(data) => {
+            onUpload(data, true); // Verified by Smart AI
+            setShowCamera(false);
+          }}
+          onClose={() => setShowCamera(false)}
+        />
+      )}
     </div>
   );
 };
