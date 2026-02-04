@@ -14,14 +14,18 @@ const SmartCamera: React.FC<SmartCameraProps> = ({ onCapture, onClose }) => {
     const detectorRef = useRef<faceDetection.FaceDetector | null>(null);
     const [isModelLoading, setIsModelLoading] = useState(true);
     const [isCameraReady, setIsCameraReady] = useState(false);
-    const [faceDetectedInZone, setFaceDetectedInZone] = useState(false);
+    const [faceDetected, setFaceDetected] = useState(false);
+    const [faceInZone, setFaceInZone] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
     // Constants for the detection zone
-    const ZONE_WIDTH_PCT = 0.65;
-    const ZONE_HEIGHT_PCT = 0.55;
+    const ZONE_WIDTH_PCT = 0.7; // Slightly larger for easier detection
+    const ZONE_HEIGHT_PCT = 0.6;
 
     useEffect(() => {
+        // Scroll Lock
+        document.body.style.overflow = 'hidden';
+
         const initDetector = async () => {
             try {
                 const model = faceDetection.SupportedModels.MediaPipeFaceDetector;
@@ -60,6 +64,7 @@ const SmartCamera: React.FC<SmartCameraProps> = ({ onCapture, onClose }) => {
         startCamera();
 
         return () => {
+            document.body.style.overflow = '';
             const stream = videoRef.current?.srcObject as MediaStream;
             stream?.getTracks().forEach(track => track.stop());
         };
@@ -72,10 +77,10 @@ const SmartCamera: React.FC<SmartCameraProps> = ({ onCapture, onClose }) => {
             const faces = await detectorRef.current.estimateFaces(videoRef.current);
 
             if (faces.length > 0) {
+                setFaceDetected(true);
                 const face = faces[0];
                 const box = face.box;
 
-                // Define target zone in pixels
                 const vw = videoRef.current.videoWidth;
                 const vh = videoRef.current.videoHeight;
 
@@ -84,7 +89,8 @@ const SmartCamera: React.FC<SmartCameraProps> = ({ onCapture, onClose }) => {
                 const zoneX = (vw - zoneW) / 2;
                 const zoneY = (vh - zoneH) / 2;
 
-                // Check if face center is roughly in the zone
+                // TFJS detections are on the raw video frame.
+                // Center point calculation
                 const faceCenterX = box.xMin + box.width / 2;
                 const faceCenterY = box.yMin + box.height / 2;
 
@@ -93,12 +99,14 @@ const SmartCamera: React.FC<SmartCameraProps> = ({ onCapture, onClose }) => {
                     faceCenterX < zoneX + zoneW &&
                     faceCenterY > zoneY &&
                     faceCenterY < zoneY + zoneH &&
-                    box.width > zoneW * 0.4 // Ensure face isn't too small/far
+                    box.width > zoneW * 0.4 && // Minimum size
+                    box.width < zoneW * 1.2    // Maximum size (not too close)
                 );
 
-                setFaceDetectedInZone(isInZone);
+                setFaceInZone(isInZone);
             } else {
-                setFaceDetectedInZone(false);
+                setFaceDetected(false);
+                setFaceInZone(false);
             }
         } catch (err) {
             console.warn("Detection loop error:", err);
@@ -123,30 +131,36 @@ const SmartCamera: React.FC<SmartCameraProps> = ({ onCapture, onClose }) => {
 
         const ctx = canvas.getContext('2d');
         if (ctx) {
+            // Flip the image for horizontal mirroring if desired, 
+            // but usually raw is preferred for medical. 
+            // Keeping it simple and high-quality:
             ctx.drawImage(video, 0, 0);
-            const imageData = canvas.toDataURL('image/jpeg', 0.9);
+            const imageData = canvas.toDataURL('image/jpeg', 0.95);
             onCapture(imageData);
             onClose();
         }
     };
 
     return (
-        <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-4">
+        <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-4 touch-none">
             {/* Header */}
             <div className="absolute top-0 inset-x-0 p-6 flex justify-between items-center z-20">
-                <h3 className="text-white font-bold text-lg font-poppins">Secure Face Capture</h3>
+                <div className="flex flex-col">
+                    <h3 className="text-white font-bold text-lg font-poppins">Secure Photo Capture</h3>
+                    <p className="text-white/40 text-xs font-medium uppercase tracking-[0.2em]">Face/Scalp Detection Active</p>
+                </div>
                 <button
                     onClick={onClose}
-                    className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors"
+                    className="w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center text-white transition-colors border border-white/5"
                 >
-                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
 
             {/* Main Viewport */}
-            <div className="relative w-full max-w-lg aspect-[3/4] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-white/10">
+            <div className="relative w-full max-w-lg aspect-[3/4] bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border border-white/10 ring-1 ring-white/10">
                 <video
                     ref={videoRef}
                     autoPlay
@@ -160,20 +174,37 @@ const SmartCamera: React.FC<SmartCameraProps> = ({ onCapture, onClose }) => {
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
                     {/* Scanning Box */}
                     <div
-                        className={`transition-all duration-300 border-4 rounded-[40px] shadow-[0_0_0_2000px_rgba(0,0,0,0.6)] ${faceDetectedInZone ? 'border-green-500 scale-105 shadow-[0_0_30px_rgba(34,197,94,0.5)]' : 'border-white/30'
+                        className={`transition-all duration-300 border-4 rounded-[40px] shadow-[0_0_0_2000px_rgba(0,0,0,0.6)] ${isModelLoading ? 'border-white/10' :
+                                faceInZone ? 'border-green-500 scale-105 shadow-[0_0_40px_rgba(34,197,94,0.6)]' :
+                                    'border-red-500/50'
                             }`}
                         style={{
                             width: `${ZONE_WIDTH_PCT * 100}%`,
                             height: `${ZONE_HEIGHT_PCT * 100}%`
                         }}
-                    />
+                    >
+                        {/* Dynamic Corners */}
+                        <div className={`absolute -top-1 -left-1 w-8 h-8 border-t-4 border-l-4 rounded-tl-3xl transition-colors ${faceInZone ? 'border-green-500' : 'border-red-500'}`} />
+                        <div className={`absolute -top-1 -right-1 w-8 h-8 border-t-4 border-r-4 rounded-tr-3xl transition-colors ${faceInZone ? 'border-green-500' : 'border-red-500'}`} />
+                        <div className={`absolute -bottom-1 -left-1 w-8 h-8 border-b-4 border-l-4 rounded-bl-3xl transition-colors ${faceInZone ? 'border-green-500' : 'border-red-500'}`} />
+                        <div className={`absolute -bottom-1 -right-1 w-8 h-8 border-b-4 border-r-4 rounded-br-3xl transition-colors ${faceInZone ? 'border-green-500' : 'border-red-500'}`} />
+                    </div>
 
                     {/* Status Label */}
-                    <div className="absolute top-[80%] transform translate-y-4">
-                        <span className={`px-4 py-2 rounded-full text-sm font-bold uppercase tracking-widest transition-all duration-300 ${faceDetectedInZone ? 'bg-green-500 text-white animate-pulse' : 'bg-white/20 text-white/70'
+                    <div className="absolute bottom-[15%] w-full flex flex-col items-center gap-3">
+                        <span className={`px-6 py-2.5 rounded-full text-xs font-black uppercase tracking-[0.2em] transition-all duration-500 backdrop-blur-md border shadow-lg ${isModelLoading ? 'bg-white/10 text-white/40 border-white/5' :
+                                faceInZone ? 'bg-green-500 text-white border-green-400 shadow-green-500/20 animate-pulse' :
+                                    'bg-red-500/20 text-red-500 border-red-500/30'
                             }`}>
-                            {isModelLoading ? 'Initializing AI...' : faceDetectedInZone ? 'Ready to Capture' : 'Position Head in Box'}
+                            {isModelLoading ? 'Syncing AI...' :
+                                faceInZone ? 'System Locked - Capture Ready' :
+                                    !faceDetected ? 'Searching for Face...' : 'Position Head in Box'}
                         </span>
+                        {!faceInZone && !isModelLoading && (
+                            <p className="text-white/50 text-[10px] font-bold uppercase tracking-widest text-center px-8">
+                                Move your head closer or adjust your position
+                            </p>
+                        )}
                     </div>
                 </div>
 
@@ -185,28 +216,56 @@ const SmartCamera: React.FC<SmartCameraProps> = ({ onCapture, onClose }) => {
                         <p className="text-white font-medium mb-6">{error}</p>
                         <button
                             onClick={onClose}
-                            className="px-6 py-2 bg-white text-black font-bold rounded-lg"
+                            className="px-8 py-3 bg-white text-black font-bold rounded-xl active:scale-95 transition"
                         >
-                            Go Back
+                            Return to App
                         </button>
                     </div>
                 )}
             </div>
 
-            {/* Controls */}
-            <div className="mt-12 flex flex-col items-center gap-6">
+            {/* Bottom Controls */}
+            <div className="mt-8 relative w-full flex items-center justify-center px-12">
+                {/* Back Button */}
+                <button
+                    onClick={onClose}
+                    className="absolute left-10 flex flex-col items-center gap-1 opacity-60 hover:opacity-100 transition active:scale-90"
+                >
+                    <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center border border-white/10">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                        </svg>
+                    </div>
+                    <span className="text-white/40 text-[10px] uppercase font-black tracking-widest">Back</span>
+                </button>
+
+                {/* Capture Button */}
                 <button
                     onClick={capture}
-                    disabled={!faceDetectedInZone}
-                    className={`w-20 h-20 rounded-full border-4 flex items-center justify-center transition-all duration-300 active:scale-90 ${faceDetectedInZone
-                        ? 'bg-white border-green-500 shadow-[0_0_20px_rgba(255,255,255,0.4)]'
-                        : 'bg-white/10 border-white/20 cursor-not-allowed'
+                    disabled={!faceInZone}
+                    className={`relative w-24 h-24 rounded-full border-4 flex items-center justify-center transition-all duration-300 active:scale-90 ${faceInZone
+                        ? 'bg-white border-green-500 shadow-[0_0_30px_rgba(34,197,94,0.4)]'
+                        : 'bg-white/5 border-white/10 cursor-not-allowed'
                         }`}
                 >
-                    <div className={`w-14 h-14 rounded-full transition-all duration-300 ${faceDetectedInZone ? 'bg-primary' : 'bg-white/20'
-                        }`} />
+                    <div className={`w-18 h-18 rounded-full transition-all duration-500 ${faceInZone ? 'bg-primary scale-90 shadow-inner' : 'bg-white/10'
+                        }`}>
+                        {faceInZone && (
+                            <svg className="w-10 h-10 text-white mx-auto mt-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                        )}
+                    </div>
                 </button>
-                <p className="text-white/50 text-sm font-medium">Capture when the box turns green</p>
+
+                <div className="absolute right-10 flex flex-col items-center gap-1 opacity-20">
+                    <div className="w-12 h-12 bg-white/10 rounded-full flex items-center justify-center">
+                        <svg className="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                        </svg>
+                    </div>
+                    <span className="text-white/40 text-[10px] uppercase font-black tracking-widest">Auto</span>
+                </div>
             </div>
 
             <canvas ref={canvasRef} className="hidden" />
