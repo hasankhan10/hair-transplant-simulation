@@ -1,7 +1,4 @@
-import React, { useRef, useEffect, useState, useCallback } from 'react';
-import * as faceDetection from '@tensorflow-models/face-detection';
-import '@tensorflow/tfjs-backend-webgl';
-import '@tensorflow/tfjs-core';
+import React, { useRef, useEffect, useState } from 'react';
 
 interface SmartCameraProps {
     onCapture: (imageData: string) => void;
@@ -11,21 +8,16 @@ interface SmartCameraProps {
 const SmartCamera: React.FC<SmartCameraProps> = ({ onCapture, onClose }) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
-    const detectorRef = useRef<faceDetection.FaceDetector | null>(null);
-    const [isModelLoading, setIsModelLoading] = useState(true);
     const [isCameraReady, setIsCameraReady] = useState(false);
-    const [faceDetected, setFaceDetected] = useState(false);
-    const [faceInZone, setFaceInZone] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
 
-    // Constants for the detection zone (Oval Aperture)
+    // Constants for the visual guide (Oval Aperture)
     const OVAL_WIDTH_PCT = 0.65;
     const OVAL_HEIGHT_PCT = 0.65;
 
     const startCamera = async (mode: 'user' | 'environment') => {
         try {
-            // Stop existing tracks if any
             const currentStream = videoRef.current?.srcObject as MediaStream;
             currentStream?.getTracks().forEach(track => track.stop());
 
@@ -42,29 +34,12 @@ const SmartCamera: React.FC<SmartCameraProps> = ({ onCapture, onClose }) => {
             }
         } catch (err) {
             console.error("Camera access failed:", err);
-            setError("Could not switch camera. Check permissions.");
+            setError("Could not access camera. Check permissions.");
         }
     };
 
     useEffect(() => {
         document.body.style.overflow = 'hidden';
-
-        const initDetector = async () => {
-            try {
-                const model = faceDetection.SupportedModels.MediaPipeFaceDetector;
-                const detectorConfig: faceDetection.MediaPipeFaceDetectorTfjsModelConfig = {
-                    runtime: 'tfjs',
-                    maxFaces: 1,
-                } as any;
-                detectorRef.current = await faceDetection.createDetector(model, detectorConfig);
-                setIsModelLoading(false);
-            } catch (err) {
-                console.error("AI load error:", err);
-                setError("AI sync failed.");
-            }
-        };
-
-        initDetector();
         startCamera(facingMode);
 
         return () => {
@@ -80,61 +55,6 @@ const SmartCamera: React.FC<SmartCameraProps> = ({ onCapture, onClose }) => {
         startCamera(newMode);
     };
 
-    const detect = useCallback(async () => {
-        if (!detectorRef.current || !videoRef.current || videoRef.current.readyState < 2) return;
-
-        try {
-            const faces = await detectorRef.current.estimateFaces(videoRef.current);
-
-            if (faces && faces.length > 0) {
-                setFaceDetected(true);
-                const face = faces[0];
-                const box = face.box;
-
-                const vw = videoRef.current.videoWidth;
-                const vh = videoRef.current.videoHeight;
-
-                // --- RAW SENSOR CENTER SYNC ---
-                // This is the MOST ROBUST way. The camera is centered in your screen.
-                // The center of the sensor (0.5, 0.5) IS the center of your visual Oval.
-
-                const faceLeft = box.xMin / vw;
-                const faceRight = (box.xMin + box.width) / vw;
-                const faceTop = box.yMin / vh;
-                const faceBottom = (box.yMin + box.height) / vh;
-
-                // Absolute Center intersection
-                const midX = 0.5;
-                const midY = 0.5;
-                const snapBuffer = 0.15; // Extremely lenient 15% snap zone
-
-                const isCoveringCenter = (
-                    midX > faceLeft - snapBuffer &&
-                    midX < faceRight + snapBuffer &&
-                    midY > faceTop - snapBuffer &&
-                    midY < faceBottom + snapBuffer
-                );
-
-                const isProperSize = (box.width / vw) > 0.12;
-
-                setFaceInZone(isCoveringCenter && isProperSize);
-            } else {
-                setFaceDetected(false);
-                setFaceInZone(false);
-            }
-        } catch (err) {
-            console.warn("AI Sensor Error:", err);
-            setFaceInZone(false);
-        }
-
-        requestAnimationFrame(detect);
-    }, []);
-
-    useEffect(() => {
-        if (isCameraReady && !isModelLoading) {
-            detect();
-        }
-    }, [isCameraReady, isModelLoading, detect]);
 
     const capture = () => {
         if (!videoRef.current || !canvasRef.current) return;
@@ -154,14 +74,14 @@ const SmartCamera: React.FC<SmartCameraProps> = ({ onCapture, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-[100] bg-black flex flex-col items-center justify-center p-4 touch-none">
+        <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center p-4 touch-none">
             {/* Header */}
             <div className="absolute top-0 inset-x-0 p-6 flex justify-between items-center z-20">
                 <div className="flex flex-col">
-                    <h3 className="text-white font-black text-lg font-poppins tracking-tight uppercase">Medical Capture</h3>
+                    <h3 className="text-white font-black text-lg font-poppins tracking-tight uppercase">Manual Capture</h3>
                     <div className="flex items-center gap-2">
-                        <div className={`w-2 h-2 rounded-full ${faceInZone ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`} />
-                        <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em]">{facingMode === 'user' ? 'Selfie Mode' : 'Clinical Mode'}</p>
+                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
+                        <p className="text-white/40 text-[10px] font-bold uppercase tracking-[0.2em]">{facingMode === 'user' ? 'Selfie Mode' : 'Environmental Mode'}</p>
                     </div>
                 </div>
                 <button
@@ -185,33 +105,22 @@ const SmartCamera: React.FC<SmartCameraProps> = ({ onCapture, onClose }) => {
                     className={`absolute inset-0 w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
                 />
 
-                {/* AI Overlay Guide (Oval Mask) */}
+                {/* Overlay Guide (Oval Mask) */}
                 <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                    {/* The Oval Guideline */}
                     <div
-                        className={`transition-all duration-500 border-4 rounded-[50%] shadow-[0_0_0_2000px_rgba(0,0,0,0.7)] ${isModelLoading ? 'border-white/5' :
-                            faceInZone ? 'border-green-500 scale-105 shadow-[0_0_60px_rgba(34,197,94,0.4)]' :
-                                'border-red-600 shadow-[0_0_40px_rgba(220,38,38,0.5)]'
-                            }`}
+                        className="transition-all duration-500 border-2 border-white/30 rounded-[50%] shadow-[0_0_0_2000px_rgba(0,0,0,0.7)]"
                         style={{
                             width: `${OVAL_WIDTH_PCT * 100}%`,
                             height: `${OVAL_HEIGHT_PCT * 100}%`
                         }}
                     >
-                        {/* Central Crosshair */}
-                        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-[1px] ${faceInZone ? 'bg-green-500' : 'bg-red-600/50'}`} />
-                        <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-[1px] ${faceInZone ? 'bg-green-500' : 'bg-red-600/50'}`} />
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-[1px] bg-white/20" />
+                        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 h-4 w-[1px] bg-white/20" />
                     </div>
 
-                    {/* Status Label */}
                     <div className="absolute bottom-[10%] w-full flex flex-col items-center gap-3">
-                        <span className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-300 backdrop-blur-md border shadow-2xl ${isModelLoading ? 'bg-white/10 text-white/40 border-white/5' :
-                            faceInZone ? 'bg-green-600 text-white border-green-500 shadow-green-600/20' :
-                                'bg-red-600 text-white border-red-500 shadow-red-600/10'
-                            }`}>
-                            {isModelLoading ? 'Syncing...' :
-                                faceInZone ? 'Locked - Take Photo' :
-                                    !faceDetected ? 'Searching Face...' : 'Align Head to Oval'}
+                        <span className="px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-[0.2em] bg-white/10 text-white/70 border border-white/10 backdrop-blur-md">
+                            Center Head & Take Photo
                         </span>
                     </div>
                 </div>
@@ -250,19 +159,13 @@ const SmartCamera: React.FC<SmartCameraProps> = ({ onCapture, onClose }) => {
                 {/* Capture Button */}
                 <button
                     onClick={capture}
-                    disabled={!faceInZone}
-                    className={`mx-8 relative w-24 h-24 rounded-full border-4 flex items-center justify-center transition-all duration-300 active:scale-90 ${faceInZone
-                        ? 'bg-white border-green-500 shadow-[0_0_40px_rgba(34,197,94,0.3)]'
-                        : 'bg-red-500/20 border-red-500/30 cursor-not-allowed'
+                    disabled={!isCameraReady}
+                    className={`mx-8 relative w-24 h-24 rounded-full border-4 flex items-center justify-center transition-all duration-300 active:scale-90 ${isCameraReady
+                        ? 'bg-white border-primary shadow-[0_0_40px_rgba(var(--primary-rgb),0.3)]'
+                        : 'bg-white/5 border-white/10 cursor-not-allowed opacity-40'
                         }`}
                 >
-                    <div className={`w-18 h-18 rounded-full transition-all duration-500 ${faceInZone ? 'bg-primary' : 'bg-red-500/40'}`}>
-                        {faceInZone && (
-                            <svg className="w-10 h-10 text-white mx-auto mt-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                            </svg>
-                        )}
-                    </div>
+                    <div className={`w-18 h-18 rounded-full transition-all duration-500 ${isCameraReady ? 'bg-primary' : 'bg-white/10'}`} />
                 </button>
 
                 {/* Switch Camera Button */}

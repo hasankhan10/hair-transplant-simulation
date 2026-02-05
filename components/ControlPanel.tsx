@@ -11,6 +11,8 @@ interface ControlPanelProps {
   onStartMapping: () => void;
   isProcessing: boolean;
   hasImage: boolean;
+  showCamera: boolean;
+  setShowCamera: (show: boolean) => void;
 }
 
 const ControlPanel: React.FC<ControlPanelProps> = ({
@@ -21,11 +23,12 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
   onReset,
   onStartMapping,
   isProcessing,
-  hasImage
+  hasImage,
+  showCamera,
+  setShowCamera
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [showUploadOptions, setShowUploadOptions] = useState(false);
-  const [showCamera, setShowCamera] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -75,16 +78,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
   const handleAgeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
-    // Allow empty string or non-negative numbers
     if (val === '' || (!isNaN(Number(val)) && Number(val) >= 0)) {
       setParams({ ...params, age: val });
-    }
-  };
-
-  const handleAgeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    // Prevent characters that allow negative or exponential notation
-    if (['-', '+', 'e', 'E'].includes(e.key)) {
-      e.preventDefault();
     }
   };
 
@@ -114,7 +109,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               </svg>
             </div>
             <span className="text-base font-bold text-slate-700 group-hover:text-primary font-poppins">Capture Your Photo</span>
-            <span className="text-sm text-slate-400 mt-1 uppercase tracking-widest text-[10px] font-black">AI-Ready Selfie Recommended</span>
+            <span className="text-sm text-slate-400 mt-1 uppercase tracking-widest text-[10px] font-black">Standard Selfie Recommended</span>
           </button>
         ) : (
           <div className="flex flex-col space-y-3">
@@ -168,18 +163,16 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               onChange={handleDensityChange}
               className="w-full h-2 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-primary focus:outline-none"
             />
-            {/* Alignment-Corrected Labels Container */}
             <div className="relative mt-3 h-10 w-full">
               {densityLevels.map((level, idx) => {
                 const isSelected = currentDensityIndex === idx;
-                // Position logic: 0% for Low, 50% for Medium, 100% for High
                 const positionStyle = idx === 0 ? 'left-0' : idx === 1 ? 'left-1/2 -translate-x-1/2' : 'right-0';
 
                 return (
                   <div
                     key={level.label}
                     className={`absolute ${positionStyle} flex flex-col items-center transition-colors duration-300`}
-                    style={{ width: idx === 1 ? 'auto' : '1px', overflow: 'visible' }} // 1px width for ends ensures center is at edge
+                    style={{ width: idx === 1 ? 'auto' : '1px', overflow: 'visible' }}
                   >
                     <div className={`w-0.5 h-1.5 rounded-full mb-1 ${isSelected ? 'bg-primary' : 'bg-slate-300'}`} />
                     <span className={`text-[11px] font-bold uppercase whitespace-nowrap tracking-tighter font-poppins ${isSelected ? 'text-primary' : 'text-slate-400'}`}>
@@ -227,7 +220,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
           </svg>
           <p className="text-xs text-secondary leading-relaxed font-bold">
-            <strong>TIP:</strong> The AI will only add hair in the areas you draw. Make sure to cover the spots you want to restore. <br /> <br />AI-generated preview. Results may vary.
+            <strong>TIP:</strong> The AI will only add hair in the areas you draw. Make sure to cover the spots you want to restore. <br /> <br />AI-generated preview.
           </p>
         </div>
       </div>
@@ -251,8 +244,8 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
                   </svg>
                 </div>
                 <div className="text-left">
-                  <span className="block font-bold text-secondary font-poppins">Smart AI Camera</span>
-                  <span className="text-xs text-slate-500">Auto-detects scalp/face</span>
+                  <span className="block font-bold text-secondary font-poppins">Use Camera</span>
+                  <span className="text-xs text-slate-500">Capture photo directly</span>
                 </div>
               </button>
 
@@ -282,11 +275,10 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
         </div>
       )}
 
-      {/* Smart Camera Transition */}
       {showCamera && (
         <SmartCamera
           onCapture={(data) => {
-            onUpload(data, true); // Verified by Smart AI
+            onUpload(data, true);
             setShowCamera(false);
           }}
           onClose={() => setShowCamera(false)}
