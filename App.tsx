@@ -113,10 +113,11 @@ const App: React.FC = () => {
       setProcessingProgress(prev => {
         if (prev >= 95) return prev;
 
-        // Update status based on progress
-        if (prev > 75) setProcessingStatus('Finalizing Reconstruction...');
-        else if (prev > 50) setProcessingStatus('Performing Follicular Placement...');
-        else if (prev > 25) setProcessingStatus('Calculating Graft Density...');
+        // Update status based on progress (Using professional clinical terminology)
+        if (prev > 75) setProcessingStatus('Finalizing Aesthetic Reconstruction...');
+        else if (prev > 55) setProcessingStatus('Simulating Optimal Graft Density...');
+        else if (prev > 30) setProcessingStatus('Performing Medical-Grade Follicular Alignment...');
+        else if (prev > 10) setProcessingStatus('Analyzing Scalp Architecture...');
 
         return prev + Math.random() * 5;
       });
@@ -193,8 +194,8 @@ const App: React.FC = () => {
           <p className="text-slate-500 text-base">
             &copy; {new Date().getFullYear()} Dr Paul's Hair Transplant Simulation.
           </p>
-          <p className="text-slate-400 text-sm mt-2 italic">
-            "AI-generated preview. Results may vary." Developed by <a target="_blank" className="text-primary hover:underline font-bold" href="http://www.stovamedia.in">Stova Media</a>
+          <p className="text-slate-400 text-[11px] md:text-xs mt-2 italic font-medium">
+            "Simulated result for visual guidance only. Actual results may vary. This visualization does not guarantee clinical outcomes." Developed by <a target="_blank" className="text-primary hover:underline font-bold" href="http://www.stovamedia.in">Stova Media</a>
           </p>
         </div>
       </footer>
