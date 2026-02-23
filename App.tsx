@@ -13,6 +13,7 @@ import ControlPanel from './components/ControlPanel';
 import ImageDisplay from './components/ImageDisplay';
 import Header from './components/Header';
 import HowItWorksModal from './components/HowItWorksModal';
+import LeadCaptureModal from './components/LeadCaptureModal';
 import { autoCropToHead } from './services/imageProcessor';
 import { generateHairVisualization, validateScalpImage } from './services/geminiService';
 
@@ -24,6 +25,15 @@ const App: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [showHowItWorks, setShowHowItWorks] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [hasAccess, setHasAccess] = useState(false);
+
+  // Check access on load
+  React.useEffect(() => {
+    const access = localStorage.getItem('drpaul_lead_captured');
+    if (access === 'true') {
+      setHasAccess(true);
+    }
+  }, []);
 
   const [params, setParams] = useState<VisualizationParams>({
     density: GraftDensity.MEDIUM
@@ -151,54 +161,58 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
-      {!showCamera && <Header onShowHowItWorks={() => setShowHowItWorks(true)} />}
+      <LeadCaptureModal onComplete={() => setHasAccess(true)} />
 
-      <main className="flex-grow container mx-auto px-4 py-8 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          {/* Left Column: Controls */}
-          <div className="lg:col-span-4 space-y-6">
-            <ControlPanel
-              params={params}
-              setParams={setParams}
-              onUpload={handleImageUpload}
-              onRun={handleRunSimulation}
-              isProcessing={isProcessing}
-              hasImage={!!patientImage}
-              onReset={reset}
-              onStartMapping={() => setIsMapping(true)}
-              showCamera={showCamera}
-              setShowCamera={setShowCamera}
-            />
+      <div className={`flex flex-col min-h-screen transition-all duration-700 ${!hasAccess ? 'blur-xl grayscale' : ''}`}>
+        {!showCamera && <Header onShowHowItWorks={() => setShowHowItWorks(true)} />}
+
+        <main className="flex-grow container mx-auto px-4 py-8 lg:px-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            {/* Left Column: Controls */}
+            <div className="lg:col-span-4 space-y-6">
+              <ControlPanel
+                params={params}
+                setParams={setParams}
+                onUpload={handleImageUpload}
+                onRun={handleRunSimulation}
+                isProcessing={isProcessing}
+                hasImage={!!patientImage}
+                onReset={reset}
+                onStartMapping={() => setIsMapping(true)}
+                showCamera={showCamera}
+                setShowCamera={setShowCamera}
+              />
+            </div>
+
+            {/* Right Column: Visualization */}
+            <div className="lg:col-span-8">
+              <ImageDisplay
+                beforeImage={patientImage}
+                result={result}
+                isProcessing={isProcessing}
+                error={error}
+                isMapping={isMapping}
+                setIsMapping={setIsMapping}
+                onSaveMask={handleSaveMask}
+                currentMask={params.mask || null}
+                progress={processingProgress}
+                status={processingStatus}
+              />
+            </div>
           </div>
+        </main>
 
-          {/* Right Column: Visualization */}
-          <div className="lg:col-span-8">
-            <ImageDisplay
-              beforeImage={patientImage}
-              result={result}
-              isProcessing={isProcessing}
-              error={error}
-              isMapping={isMapping}
-              setIsMapping={setIsMapping}
-              onSaveMask={handleSaveMask}
-              currentMask={params.mask || null}
-              progress={processingProgress}
-              status={processingStatus}
-            />
+        <footer className="bg-white border-t border-slate-200 py-6 mt-auto">
+          <div className="container mx-auto px-4 text-center">
+            <p className="text-slate-500 text-base">
+              &copy; {new Date().getFullYear()} Dr Paul's Hair Transplant Simulation.
+            </p>
+            <p className="text-slate-400 text-[11px] md:text-xs mt-2 italic font-medium">
+              "Simulated result for visual guidance only. Actual results may vary. This visualization does not guarantee clinical outcomes." Developed by <a target="_blank" className="text-primary hover:underline font-bold" href="http://www.stovamedia.in">Stova Media</a>
+            </p>
           </div>
-        </div>
-      </main>
-
-      <footer className="bg-white border-t border-slate-200 py-6 mt-auto">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-slate-500 text-base">
-            &copy; {new Date().getFullYear()} Dr Paul's Hair Transplant Simulation.
-          </p>
-          <p className="text-slate-400 text-[11px] md:text-xs mt-2 italic font-medium">
-            "Simulated result for visual guidance only. Actual results may vary. This visualization does not guarantee clinical outcomes." Developed by <a target="_blank" className="text-primary hover:underline font-bold" href="http://www.stovamedia.in">Stova Media</a>
-          </p>
-        </div>
-      </footer>
+        </footer>
+      </div>
 
       <HowItWorksModal
         isOpen={showHowItWorks}

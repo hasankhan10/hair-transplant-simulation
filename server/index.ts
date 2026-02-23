@@ -126,6 +126,36 @@ app.post('/api/v1/validate', async (req, res) => {
     }
 });
 
+app.post('/api/v1/leads', async (req, res) => {
+    try {
+        const { name, age, gender, phone } = req.body;
+        const scriptUrl = process.env.GOOGLE_SHEET_APPS_SCRIPT_URL;
+
+        if (!scriptUrl) {
+            console.warn("GOOGLE_SHEET_APPS_SCRIPT_URL not set. Skipping sheet update.");
+            return res.json({ success: true, message: "Lead captured locally (Sheet URL missing)" });
+        }
+
+        // We use a simple fetch to the Google Apps Script Web App
+        const response = await fetch(scriptUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name,
+                age,
+                gender,
+                phone,
+                timestamp: new Date().toISOString()
+            })
+        });
+
+        res.json({ success: true });
+    } catch (error: any) {
+        console.error("Lead Error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 app.post('/api/v1/simulate', async (req, res) => {
     try {
         const { patientImage, mask, density, apiKey: providedKey } = req.body;

@@ -169,7 +169,7 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
 
   if (!beforeImage && !isProcessing && !result) {
     return (
-      <div className="bg-white rounded-2xl clinical-shadow border border-slate-100 flex flex-col items-center justify-center p-12 min-h-[600px] text-center relative">
+      <section className="bg-white rounded-2xl clinical-shadow border border-slate-100 flex flex-col items-center justify-center p-12 min-h-[600px] text-center relative" aria-labelledby="start-sim-title">
         {error && (
           <div className="absolute top-4 left-4 right-4 z-20 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center animate-in fade-in slide-in-from-top-2">
             <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
@@ -184,16 +184,16 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
           </svg>
         </div>
-        <h2 className="text-xl font-bold text-slate-800 mb-2">Start Your Simulation</h2>
+        <h2 id="start-sim-title" className="text-xl font-bold text-slate-800 mb-2">Start Your AI Hair Simulation</h2>
         <p className="text-slate-500 max-w-sm">
           Upload a clear photo of yourself to begin seeing your new look.
         </p>
-      </div>
+      </section>
     );
   }
 
   return (
-    <div className="bg-white rounded-2xl clinical-shadow border border-slate-100 flex flex-col min-h-[600px] overflow-hidden relative">
+    <article className="bg-white rounded-2xl clinical-shadow border border-slate-100 flex flex-col min-h-[600px] overflow-hidden relative">
       {isMapping && beforeImage && (
         <SurgicalCanvas
           image={beforeImage}
@@ -307,10 +307,10 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
                   <span className="absolute top-3 left-3 bg-black/70 text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest z-10 backdrop-blur-md border border-white/10">Before</span>
                   <div className="relative">
                     {beforeImage && (
-                      <img src={beforeImage} alt="Original" className="max-h-[350px] md:max-h-[500px] w-auto block object-contain bg-slate-50" />
+                      <img src={beforeImage} alt="Original patient photo before hair restoration" className="max-h-[350px] md:max-h-[500px] w-auto block object-contain bg-slate-50" />
                     )}
                     {currentMask && !result && beforeImage && (
-                      <img src={currentMask} alt="Mask Overlay" className="absolute inset-0 w-full h-full object-contain pointer-events-none opacity-70" />
+                      <img src={currentMask} alt="Simulation area selection mask" className="absolute inset-0 w-full h-full object-contain pointer-events-none opacity-70" />
                     )}
                   </div>
                 </div>
@@ -322,7 +322,7 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
                   <span className="absolute top-3 left-3 bg-primary text-white text-xs font-bold px-3 py-1 rounded-full uppercase tracking-widest z-10 shadow-lg font-poppins border border-white/20">Simulation</span>
                   <div className="relative">
                     {result ? (
-                      <img src={result.afterImage} alt="Result" className="max-h-[350px] md:max-h-[500px] w-auto block object-contain bg-slate-50" />
+                      <img src={result.afterImage} alt="Simulated hair transplant result preview" className="max-h-[350px] md:max-h-[500px] w-auto block object-contain bg-slate-50" />
                     ) : (
                       <div className="w-full aspect-square md:w-[400px] bg-slate-100 flex items-center justify-center border-2 border-dashed border-slate-200 rounded-lg m-2">
                         <div className="text-center">
@@ -395,7 +395,7 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
           <div className="w-full h-full flex flex-col items-center justify-center gap-6 p-4">
             <div className="relative max-w-2xl w-full bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden group">
               <span className="absolute top-4 left-4 bg-primary text-white text-sm font-bold px-4 py-1.5 rounded-full uppercase tracking-widest z-10 shadow-lg font-poppins">Simulation Outcome</span>
-              <img src={result.afterImage} alt="Full Result" className="w-full object-contain bg-slate-50" />
+              <img src={result.afterImage} alt="AI Hair restoration simulation full view" className="w-full object-contain bg-slate-50" />
               <div className="absolute bottom-0 inset-x-0 bg-gradient-to-t from-black/80 to-transparent p-8 text-white">
                 <p className="text-sm font-bold uppercase tracking-wider text-primary mb-1">AI-Generated Preview</p>
                 <p className="font-medium text-xs opacity-90 leading-relaxed max-w-md">"Simulated result for visual guidance only. Actual results may vary. This visualization does not guarantee clinical outcomes."</p>
@@ -483,7 +483,7 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
           </div>
         )}
       </div>
-    </div>
+    </article>
   );
 };
 
