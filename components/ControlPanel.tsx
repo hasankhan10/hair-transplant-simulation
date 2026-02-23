@@ -256,8 +256,9 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
 
       {/* Action Choice Modal (Mobile) */}
       {showUploadOptions && (
-        <div className="fixed inset-0 z-[110] flex items-end justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowUploadOptions(false)}>
-          <div className="w-full max-w-sm bg-white rounded-t-3xl p-6 animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
+        <div className="fixed inset-0 z-[20000] flex items-end justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowUploadOptions(false)}>
+          <style dangerouslySetInnerHTML={{ __html: 'body { overflow: hidden; }' }} />
+          <div className="w-full max-w-sm bg-white rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
             <div className="w-12 h-1.5 bg-slate-200 rounded-full mx-auto mb-6" />
             <h4 className="text-lg font-bold text-secondary mb-4 font-poppins text-center">Select Photo Method</h4>
             <div className="space-y-3">

@@ -74,7 +74,7 @@ const SmartCamera: React.FC<SmartCameraProps> = ({ onCapture, onClose }) => {
     };
 
     return (
-        <div className="fixed inset-0 z-[9999] bg-black flex flex-col items-center justify-center p-4 touch-none">
+        <div className="fixed inset-0 z-[20000] bg-black flex flex-col items-center justify-center p-4 touch-none">
             {/* Header */}
             <div className="absolute top-0 inset-x-0 p-6 flex justify-between items-center z-20">
                 <div className="flex flex-col">
