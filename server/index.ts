@@ -16,7 +16,13 @@ dotenv.config(); // Also load standard .env if it exists
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-// Increase payload limit for base64 images
+// 1. Request Logging for Production Debugging
+app.use((req, res, next) => {
+    console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+    next();
+});
+
+// 2. Security & Parsers
 app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 
@@ -328,21 +334,26 @@ app.get('/api/health', (req, res) => {
     res.json({ success: true, message: "Hair Simulation API is live" });
 });
 
-// Serve static assets from front-end build (for production)
+// 4. Global 404 for API
+// This ensures that any bad /api request returns a JSON 404 instead of a 405 from the static server
+app.use('/api', (req, res) => {
+    res.status(404).json({ success: false, error: `API route not found: ${req.originalUrl}` });
+});
+
+// 5. Serve static assets from front-end build (for production)
 const distPath = path.resolve(__dirname, '../dist');
 app.use(express.static(distPath));
 
-// Handle SPAs - Only catch GET requests that are NOT API calls
+// 6. Handle SPAs - Only catch GET requests that are NOT API calls
 app.use((req, res, next) => {
     if (req.method === 'GET' && !req.path.startsWith('/api')) {
         return res.sendFile(path.join(distPath, 'index.html'));
     }
+    // If it's a POST/PUT/DELETE to a non-existent API, it ends here
+    if (req.path.startsWith('/api')) {
+        return res.status(404).json({ success: false, error: "API Endpoint not found" });
+    }
     next();
-});
-
-// Global 404 for API
-app.use('/api', (req, res) => {
-    res.status(404).json({ success: false, error: `API route not found: ${req.originalUrl}` });
 });
 
 app.listen(Number(PORT), '0.0.0.0', () => {
