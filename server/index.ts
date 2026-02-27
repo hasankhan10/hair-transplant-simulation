@@ -69,10 +69,10 @@ async function compositeStrictResultServer(
 ): Promise<Buffer> {
     const originalMetadata = await sharp(originalBuffer).metadata();
 
-    // 1. Create a feathered mask (12px blur like in the browser)
+    // 1. Create a feathered mask (8px blur like in the browser)
     const featheredMask = await sharp(maskBuffer)
         .resize(originalMetadata.width, originalMetadata.height)
-        .blur(12)
+        .blur(8)
         .toBuffer();
 
     // 2. Extract the AI result through the feathered mask
@@ -258,6 +258,7 @@ MISSION: HARMONIOUS SURGICAL RESTORATION.
    - FRONTAL HAIRLINE: Create an irregular, organic, "micro-jagged" line. No straight lines.
    - TEMPORAL CLOSURE: Populate the frontotemporal corners and peaks densely.
 5. MASK BOUNDARY ADHERENCE: Fill the entire green-masked region completely. Ensure 100% follicular coverage with NO GAPS at the corners, temporal angles, or extreme edges of the selected area with natural look.
+6. Treat the green screen area as strictly the area where hair needs to be added. Do not add hair outside the green screen area.
 FINAL OUTPUT: A realistic medical simulation. ${densityLabel} DENSITY. PERFECT LIGHTING MATCH. INVISIBLE SEAMS.`;
 
         const parts: any[] = [];
