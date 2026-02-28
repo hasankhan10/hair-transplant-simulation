@@ -132,6 +132,91 @@ app.post('/api/v1/validate', async (req, res) => {
     }
 });
 
+
+// 1. In-memory OTP Store (Standard TTL strategy)
+interface OtpEntry {
+    code: string;
+    expiresAt: number;
+}
+const otpStore = new Map<string, OtpEntry>();
+const OTP_TTL = 10 * 60 * 1000; // 10 minutes
+
+app.post('/api/v1/send-otp', async (req, res) => {
+    try {
+        const { phone } = req.body;
+        if (!phone) return res.status(400).json({ success: false, error: "Phone number is required" });
+
+        // Generate 6-digit OTP
+        const otpCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Store in memory with expiry
+        otpStore.set(phone, {
+            code: otpCode,
+            expiresAt: Date.now() + OTP_TTL
+        });
+
+        // Config from .env.local
+        const username = process.env.ALOTS_USERNAME;
+        const apikey = process.env.ALOTS_API_KEY;
+        const sender = process.env.ALOTS_SENDER_ID;
+        const route = process.env.ALOTS_ROUTE;
+        const templateID = process.env.ALOTS_TEMPLATE_ID;
+        let messageTemplate = process.env.ALOTS_MESSAGE_TEMPLATE || "";
+
+        // Properly format message for Alots/DLT
+        // The DLT template usually expects the exact text with {#var#} replaced
+        const finalMessage = messageTemplate.replace('{#var#}', otpCode).replace(/^"|"$/g, '');
+
+        const alotsUrl = `https://alots.in/sms-panel/api/http/index.php?username=${username}&apikey=${apikey}&apirequest=Text&sender=${sender}&mobile=${phone}&message=${encodeURIComponent(finalMessage)}&route=${route}&TemplateID=${templateID}&format=JSON`;
+
+        console.log(`[OTP] Dispatching to ${phone} via Alots.in`);
+
+        const response = await fetch(alotsUrl);
+        const data = await response.json();
+
+        // Alots JSON response typically contains 'status' or 'response'
+        const isSuccess = data.status?.toLowerCase() === 'success' ||
+            data.response?.toLowerCase().includes('success') ||
+            data.status === 'OK';
+
+        if (isSuccess) {
+            return res.json({ success: true, message: "OTP sent successfully" });
+        } else {
+            console.error("Alots Error Response:", data);
+            return res.status(500).json({ success: false, error: data.message || "Gateway failed to deliver SMS. Check SenderID/TemplateID." });
+        }
+    } catch (error: any) {
+        console.error("OTP Send Exception:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
+app.post('/api/v1/verify-otp', async (req, res) => {
+    try {
+        const { phone, code } = req.body;
+        const entry = otpStore.get(phone);
+
+        if (!entry) {
+            return res.status(400).json({ success: false, error: "OTP expired or not requested" });
+        }
+
+        if (Date.now() > entry.expiresAt) {
+            otpStore.delete(phone);
+            return res.status(400).json({ success: false, error: "OTP has expired" });
+        }
+
+        if (entry.code === code) {
+            otpStore.delete(phone); // Clear after successful verification
+            return res.json({ success: true, message: "OTP verified successfully" });
+        } else {
+            return res.status(400).json({ success: false, error: "Invalid verification code" });
+        }
+    } catch (error: any) {
+        console.error("OTP Verify Error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 app.post('/api/v1/leads', async (req, res) => {
     try {
         const { name, age, gender, phone } = req.body;
