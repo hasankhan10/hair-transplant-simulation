@@ -1,4 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { HairLossCategory, HairType, Ethnicity, HairLossArea, GraftDensity, VisualizationParams } from '../types';
 import SmartCamera from './SmartCamera';
 
@@ -255,7 +256,7 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
       </aside>
 
       {/* Action Choice Modal (Mobile) */}
-      {showUploadOptions && (
+      {showUploadOptions && createPortal(
         <div className="fixed inset-0 z-[20000] flex items-end justify-center bg-black/60 backdrop-blur-sm p-4" onClick={() => setShowUploadOptions(false)}>
           <style dangerouslySetInnerHTML={{ __html: 'body { overflow: hidden; }' }} />
           <div className="w-full max-w-sm bg-white rounded-t-3xl p-6 shadow-2xl animate-in slide-in-from-bottom duration-300" onClick={e => e.stopPropagation()}>
@@ -273,17 +274,19 @@ const ControlPanel: React.FC<ControlPanelProps> = ({
               <button onClick={() => setShowUploadOptions(false)} className="w-full py-3 text-slate-400 font-bold uppercase text-[10px] tracking-widest mt-2">Cancel</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
 
-      {showCamera && (
+      {showCamera && createPortal(
         <SmartCamera
           onCapture={(data) => {
             onUpload(data, true);
             setShowCamera(false);
           }}
           onClose={() => setShowCamera(false)}
-        />
+        />,
+        document.body
       )}
     </section>
   );
