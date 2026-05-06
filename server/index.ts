@@ -247,6 +247,33 @@ app.post('/api/v1/leads', async (req, res) => {
     }
 });
 
+app.post('/api/v1/update-lead-image', async (req, res) => {
+    try {
+        const { phone, imageUrl } = req.body;
+        const scriptUrl = process.env.GOOGLE_SHEET_APPS_SCRIPT_URL;
+
+        if (!scriptUrl) {
+            return res.status(400).json({ success: false, error: "Sheet URL missing" });
+        }
+
+        // Send to Google Apps Script telling it to update the existing row
+        await fetch(scriptUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'updateImage',
+                phone,
+                imageUrl
+            })
+        });
+
+        res.json({ success: true });
+    } catch (error: any) {
+        console.error("Update Image Error:", error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+});
+
 app.post('/api/v1/simulate', async (req, res) => {
     try {
         const { patientImage, mask, density, apiKey: providedKey } = req.body;
