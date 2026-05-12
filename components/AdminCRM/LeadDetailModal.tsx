@@ -58,24 +58,6 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose }) => {
                 </div>
               </div>
 
-              {/* Call Center Action Box (Placeholder for future) */}
-              <div className="bg-primary/5 rounded-xl p-5 border border-primary/20">
-                <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-3">Call Center Action</h3>
-                <select className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-primary mb-3">
-                  <option>New Lead</option>
-                  <option>Followed Up</option>
-                  <option>Interested</option>
-                  <option>Booked Consultation</option>
-                  <option>Not Interested</option>
-                </select>
-                <textarea 
-                  className="w-full bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm text-slate-700 focus:outline-none focus:border-primary resize-none h-24"
-                  placeholder="Add follow-up remarks..."
-                ></textarea>
-                <button className="w-full mt-3 bg-primary text-white font-medium py-2 rounded-lg hover:bg-primary/90 transition text-sm">
-                  Save Update
-                </button>
-              </div>
             </div>
 
             {/* Right Column: Images */}
