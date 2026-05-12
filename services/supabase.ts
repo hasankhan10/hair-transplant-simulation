@@ -89,3 +89,28 @@ export const updateSalesStatus = async (phone: string, salesStatus: string) => {
     console.error("Supabase update error:", err);
   }
 };
+
+export const deleteLead = async (phone: string) => {
+  try {
+    // 1. Delete the image from storage (it uses the phone as the sessionId)
+    const fileName = `simulation_${phone}.jpg`;
+    const { error: storageError } = await supabase.storage
+      .from('simulation_images')
+      .remove([fileName]);
+      
+    if (storageError) console.warn("Could not delete image (might not exist):", storageError);
+
+    // 2. Delete the record from the database
+    const { error: dbError } = await supabase
+      .from('leads')
+      .delete()
+      .eq('phone', phone);
+      
+    if (dbError) throw dbError;
+    
+    return true;
+  } catch (err) {
+    console.error("Error deleting lead:", err);
+    return false;
+  }
+};

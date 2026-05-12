@@ -314,8 +314,8 @@ app.post('/api/v1/simulate', async (req, res) => {
             });
         }
 
-        // --- 2. PREPARE AI INPUT (Adding the Green Mask) ---
-        // Note: For deep server-side logic, we recreate the green mask overlay
+        // --- 2. PREPARE AI INPUT (Adding the Highlight Mask) ---
+        // We use a semi-transparent yellow highlight so the AI can still see the scalp texture underneath!
         let inputImageBase64 = patientBase64;
         let inputMime = patientMime;
 
@@ -326,24 +326,24 @@ app.post('/api/v1/simulate', async (req, res) => {
 
             const metadata = await sharp(patBuffer).metadata();
 
-            // Create a solid green layer
-            const greenLayer = await sharp({
+            // Create a semi-transparent yellow highlight layer
+            const highlightLayer = await sharp({
                 create: {
                     width: metadata.width!,
                     height: metadata.height!,
                     channels: 4,
-                    background: { r: 0, g: 255, b: 0, alpha: 1 }
+                    background: { r: 255, g: 255, b: 0, alpha: 0.3 }
                 }
             }).png().toBuffer();
 
-            // Mask the green layer with the user's mask
-            const greenMask = await sharp(greenLayer)
+            // Mask the highlight layer with the user's mask
+            const yellowMask = await sharp(highlightLayer)
                 .composite([{ input: maskBuffer, blend: 'dest-in' }])
                 .toBuffer();
 
             // Composite onto patient image
             const aiInputBuffer = await sharp(patBuffer)
-                .composite([{ input: greenMask, top: 0, left: 0 }])
+                .composite([{ input: yellowMask, top: 0, left: 0 }])
                 .toBuffer();
 
             inputImageBase64 = aiInputBuffer.toString('base64');
@@ -361,17 +361,22 @@ MISSION: HARMONIOUS SURGICAL RESTORATION.
    - NATURAL HANDSHAKE: Do not create a "box" or "patch". Taper the density at the mask edges to blend seamlessly with the patient's real hair.
    - DIRECTIONAL FLOW: Follow the patient's natural hair direction (forward at forehead, swirl at crown) with 100% precision.
 2. DENSITY MAPPING (MASTER REFERENCE):
-   - [MASTER CLINICAL REFERENCE]: Use this as your primary frequency standard for follicle count.
+   - [MASTER CLINICAL REFERENCE]: Use this image STRICTLY to understand how close together the hair follicles should be (the numerical density). 
+   - CRITICAL FATAL ERROR WARNING: DO NOT EVER COPY OR PASTE ANY PIXELS OR HAIR FROM THE REFERENCE IMAGE. Do not use its hair color, do not use its lighting. It is ONLY a mathematical reference for thickness.
    - OPAQUE CORE, SOFT EDGES: The center of the mask should follow high frequency follicle counts, while the perimeter must be soft and tapered.
-3. IDENTITY PRESERVATION:
-   - [PATIENT PHOTO] is the exclusive source for DNA (Color + Texture + Wave).
-   - IGNORE CURRENT THINNING: Restore the area as a successful, fully-grown result.
+3. IDENTITY PRESERVATION (PATIENT PHOTO IS THE ONLY VISUAL SOURCE):
+   - [PRIMARY PATIENT PHOTO] is the exclusive source for DNA.
+   - You MUST generate BRAND NEW hair that perfectly matches the PATIENT'S EXACT hair color, texture, and wave.
+   - IGNORE CURRENT THINNING: Restore the area as a successful, fully-grown result using the patient's own biological hair characteristics.
 4. ANATOMY & FRONTOTEMPORAL DESIGN:
    - FRONTAL HAIRLINE: Create an irregular, organic, "micro-jagged" line. No straight lines.
    - TEMPORAL CLOSURE: Populate the frontotemporal corners and peaks densely.
-5. MASK BOUNDARY ADHERENCE: Fill the entire green-masked region completely. Ensure 100% follicular coverage with NO GAPS at the corners, temporal angles, or extreme edges of the selected area with natural look.
-6. Treat the green screen area as strictly the area where hair needs to be added. Do not add hair outside the green screen area.
-FINAL OUTPUT: A realistic medical simulation. ${densityLabel} DENSITY. PERFECT LIGHTING MATCH. INVISIBLE SEAMS.`;
+5. THE YELLOW HIGHLIGHT MASK (CRITICAL INSTRUCTION):
+   - The semi-transparent yellow highlighted area on the image indicates exactly where the new hair must go.
+   - FATAL ERROR WARNING: YOU MUST COMPLETELY REPLACE THE YELLOW HIGHLIGHT WITH REALISTIC HAIR. 
+   - DO NOT LEAVE ANY YELLOW TINT VISIBLE IN THE FINAL IMAGE. The final image must look 100% natural with NO yellow pixels.
+6. Treat the yellow highlighted area as strictly the area where hair needs to be added. Do not add hair outside the highlighted area.
+FINAL OUTPUT: A realistic medical simulation. ${densityLabel} DENSITY. NO YELLOW VISIBLE. INVISIBLE SEAMS.`;
 
         const parts: any[] = [];
 

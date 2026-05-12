@@ -154,7 +154,24 @@ const LeadsList: React.FC = () => {
                   </td>
                   <td className="p-4 text-sm text-slate-500">{new Date(lead.created_at).toLocaleString()}</td>
                   <td className="p-4 text-right">
-                    <button className="text-primary hover:text-primary/80 font-medium text-sm">View</button>
+                    <div className="flex items-center justify-end space-x-3">
+                      <button className="text-primary hover:text-primary/80 font-medium text-sm">View</button>
+                      <button 
+                        onClick={async (e) => {
+                          e.stopPropagation();
+                          if (window.confirm(`Are you sure you want to completely delete ${lead.name}'s data and generated images? This cannot be undone.`)) {
+                            const { deleteLead } = await import('../../services/supabase');
+                            await deleteLead(lead.phone);
+                            // Optimistic UI update, though realtime will also catch it
+                            setLeads(prev => prev.filter(l => l.phone !== lead.phone));
+                          }
+                        }}
+                        className="text-slate-400 hover:text-red-500 transition"
+                        title="Delete Lead"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))
