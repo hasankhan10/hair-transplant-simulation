@@ -1,57 +1,79 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import LeadDetailModal from './LeadDetailModal';
-
-// Mock Data for UI Development
-const MOCK_LEADS = [
-  {
-    id: 'SESS_A1B2C3',
-    name: 'Rajesh Kumar',
-    phone: '+91 98765 43210',
-    age: '34',
-    gender: 'Male',
-    city: 'Mumbai',
-    status: 'COMPLETED',
-    timestamp: new Date(Date.now() - 1000 * 60 * 30).toISOString(),
-    originalImage: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=400',
-    generatedImage: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=400' // Using same for placeholder
-  },
-  {
-    id: 'SESS_X9Y8Z7',
-    name: 'Amit Patel',
-    phone: '+91 91234 56789',
-    age: '42',
-    gender: 'Male',
-    city: 'Delhi',
-    status: 'AREA_MAPPED',
-    timestamp: new Date(Date.now() - 1000 * 60 * 120).toISOString(),
-    originalImage: null,
-    generatedImage: null
-  },
-  {
-    id: 'SESS_M5N6O7',
-    name: 'Unknown Visitor',
-    phone: 'Not provided',
-    age: '',
-    gender: '',
-    city: '',
-    status: 'LANDED',
-    timestamp: new Date(Date.now() - 1000 * 60 * 5).toISOString(),
-    originalImage: null,
-    generatedImage: null
-  }
-];
+import { supabase } from '../../services/supabase';
 
 const LeadsList: React.FC = () => {
+  const [leads, setLeads] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'COMPLETED':
-        return <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold">Completed</span>;
-      case 'LANDED':
-        return <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-bold">Landed</span>;
+  useEffect(() => {
+    fetchLeads();
+
+    // Set up Realtime Subscription
+    const channel = supabase
+      .channel('public:leads')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, (payload) => {
+        console.log('Realtime update received!', payload);
+        fetchLeads(); // Re-fetch all leads to ensure correct sorting and full data
+      })
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, []);
+
+  const fetchLeads = async () => {
+    setIsLoading(true);
+    try {
+      const { data, error } = await supabase
+        .from('leads')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('Error fetching leads:', error);
+      } else if (data) {
+        setLeads(data);
+      }
+    } catch (err) {
+      console.error('Unexpected error fetching leads:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleSalesStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>, phone: string) => {
+    e.stopPropagation();
+    const newStatus = e.target.value;
+    
+    // Optimistic UI Update
+    setLeads(prev => prev.map(l => l.phone === phone ? { ...l, status: newStatus } : l));
+    
+    // Save to DB
+    const { updateSalesStatus } = await import('../../services/supabase');
+    await updateSalesStatus(phone, newStatus);
+  };
+
+  const getJourneyBadge = (journeyStatus: string, imageUrl: string) => {
+    if (imageUrl) {
+      return <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold whitespace-nowrap">Simulation Completed</span>;
+    }
+    
+    switch (journeyStatus) {
+      case 'Lead Captured':
+        return <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold whitespace-nowrap">Lead Captured</span>;
+      case 'Photo Uploaded':
+        return <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold whitespace-nowrap">Photo Uploaded</span>;
+      case 'Area Mapped':
+        return <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold whitespace-nowrap">Area Mapped</span>;
+      case 'Generating Simulation':
+        return <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold whitespace-nowrap">Generating...</span>;
+      case 'Simulation Completed':
+        return <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold whitespace-nowrap">Simulation Completed</span>;
       default:
-        return <span className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-xs font-bold">{status.replace('_', ' ')}</span>;
+        return <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-full text-xs font-bold whitespace-nowrap">{journeyStatus || 'Started'}</span>;
     }
   };
 
@@ -60,7 +82,7 @@ const LeadsList: React.FC = () => {
       <div className="p-6 border-b border-slate-200 flex justify-between items-center">
         <div>
           <h2 className="text-lg font-bold text-slate-800 font-poppins">Recent Leads</h2>
-          <p className="text-sm text-slate-500">Monitor and manage incoming simulation prospects.</p>
+          <p className="text-sm text-slate-500">Monitor live journeys and update sales status.</p>
         </div>
         <div className="flex space-x-2">
           <input 
@@ -80,43 +102,77 @@ const LeadsList: React.FC = () => {
             <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
               <th className="p-4 font-medium border-b border-slate-200">Prospect</th>
               <th className="p-4 font-medium border-b border-slate-200">Contact</th>
-              <th className="p-4 font-medium border-b border-slate-200">Status</th>
+              <th className="p-4 font-medium border-b border-slate-200">Sales Status</th>
+              <th className="p-4 font-medium border-b border-slate-200">Live Journey</th>
               <th className="p-4 font-medium border-b border-slate-200">Date/Time</th>
               <th className="p-4 font-medium border-b border-slate-200 text-right">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100">
-            {MOCK_LEADS.map((lead) => (
-              <tr 
-                key={lead.id} 
-                className="hover:bg-slate-50 transition cursor-pointer"
-                onClick={() => setSelectedLead(lead)}
-              >
-                <td className="p-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs">
-                      {lead.name.charAt(0)}
-                    </div>
-                    <div>
-                      <p className="font-bold text-slate-700 text-sm">{lead.name}</p>
-                      <p className="text-xs text-slate-400 font-mono mt-0.5">{lead.id}</p>
-                    </div>
-                  </div>
-                </td>
-                <td className="p-4 text-sm text-slate-600">{lead.phone}</td>
-                <td className="p-4">{getStatusBadge(lead.status)}</td>
-                <td className="p-4 text-sm text-slate-500">{new Date(lead.timestamp).toLocaleString()}</td>
-                <td className="p-4 text-right">
-                  <button className="text-primary hover:text-primary/80 font-medium text-sm">View</button>
-                </td>
+            {isLoading ? (
+              <tr>
+                <td colSpan={6} className="p-8 text-center text-slate-500">Loading leads...</td>
               </tr>
-            ))}
+            ) : leads.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="p-8 text-center text-slate-500">No leads found. Waiting for new submissions.</td>
+              </tr>
+            ) : (
+              leads.map((lead) => (
+                <tr 
+                  key={lead.id} 
+                  className="hover:bg-slate-50 transition cursor-pointer"
+                  onClick={() => setSelectedLead(lead)}
+                >
+                  <td className="p-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs uppercase">
+                        {lead.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="font-bold text-slate-700 text-sm capitalize">{lead.name}</p>
+                        <p className="text-xs text-slate-400 font-mono mt-0.5">{lead.id.substring(0, 8).toUpperCase()}</p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="p-4 text-sm text-slate-600">{lead.phone}</td>
+                  <td className="p-4" onClick={(e) => e.stopPropagation()}>
+                    <select 
+                      value={lead.status || 'New Lead'}
+                      onChange={(e) => handleSalesStatusChange(e, lead.phone)}
+                      className="bg-slate-50 border border-slate-200 text-slate-700 text-xs rounded-lg focus:ring-primary focus:border-primary block p-2"
+                    >
+                      <option value="New Lead">New Lead</option>
+                      <option value="Contacted">Contacted</option>
+                      <option value="Interested">Interested</option>
+                      <option value="Not Interested">Not Interested</option>
+                      <option value="Converted">Converted</option>
+                    </select>
+                  </td>
+                  <td className="p-4">
+                    {getJourneyBadge(lead.journey_status, lead.simulation_image_url)}
+                  </td>
+                  <td className="p-4 text-sm text-slate-500">{new Date(lead.created_at).toLocaleString()}</td>
+                  <td className="p-4 text-right">
+                    <button className="text-primary hover:text-primary/80 font-medium text-sm">View</button>
+                  </td>
+                </tr>
+              ))
+            )}
           </tbody>
         </table>
       </div>
 
       {selectedLead && (
-        <LeadDetailModal lead={selectedLead} onClose={() => setSelectedLead(null)} />
+        <LeadDetailModal 
+          lead={{
+            ...selectedLead,
+            timestamp: selectedLead.created_at,
+            generatedImage: selectedLead.simulation_image_url,
+            originalImage: null // We don't save the original image to DB to save space
+          }} 
+          onClose={() => setSelectedLead(null)} 
+        />
       )}
     </div>
   );

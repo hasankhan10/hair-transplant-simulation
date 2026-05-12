@@ -79,32 +79,26 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose }) => {
             </div>
 
             {/* Right Column: Images */}
-            <div className="lg:col-span-2">
-              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Simulation Results</h3>
+            <div className="lg:col-span-2 flex flex-col">
+              <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Simulation Result (Collage)</h3>
               
-              {lead.originalImage && lead.generatedImage ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <p className="text-center font-medium text-slate-600">Original Photo</p>
-                    <div className="bg-slate-100 rounded-xl overflow-hidden border border-slate-200 aspect-[3/4] flex items-center justify-center">
-                      <img src={lead.originalImage} alt="Original" className="w-full h-full object-cover" />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-center font-bold text-primary">AI Simulation</p>
-                    <div className="bg-slate-100 rounded-xl overflow-hidden border-2 border-primary/30 shadow-lg aspect-[3/4] flex items-center justify-center relative">
-                      <img src={lead.generatedImage} alt="Generated" className="w-full h-full object-cover" />
-                      <div className="absolute top-3 right-3 bg-white/90 backdrop-blur text-primary text-xs font-bold px-2 py-1 rounded-md shadow">
-                        Result
-                      </div>
-                    </div>
+              {lead.generatedImage ? (
+                <div className="bg-slate-100 rounded-xl overflow-hidden border-2 border-primary/30 shadow-lg flex-1 flex items-center justify-center relative p-2">
+                  <img 
+                    src={lead.generatedImage} 
+                    alt="Simulation Collage" 
+                    className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-sm" 
+                  />
+                  <div className="absolute top-3 right-3 bg-white/90 backdrop-blur text-primary text-xs font-bold px-3 py-1.5 rounded-md shadow flex items-center space-x-1">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                    <span>Final Result</span>
                   </div>
                 </div>
               ) : (
-                <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl h-64 flex flex-col items-center justify-center text-slate-400">
-                  <svg className="w-12 h-12 mb-3 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
-                  <p>No simulation images available for this lead yet.</p>
-                  <p className="text-sm mt-1">Status: {lead.status}</p>
+                <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl flex-1 flex flex-col items-center justify-center text-slate-400 p-8">
+                  <svg className="w-12 h-12 mb-3 opacity-50 animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" /></svg>
+                  <p className="font-medium text-slate-500">Image not generated yet</p>
+                  <p className="text-sm mt-2">Current Status: {lead.journey_status || lead.status}</p>
                 </div>
               )}
             </div>

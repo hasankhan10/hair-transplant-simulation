@@ -169,19 +169,22 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
         const phone = userDataStr ? JSON.parse(userDataStr).phone : 'unknown';
 
         console.log("Uploading to Supabase...");
-        const { uploadSimulationImage } = await import('../services/supabase');
+        const { uploadSimulationImage, updateLeadImageInSupabase } = await import('../services/supabase');
         const publicUrl = await uploadSimulationImage(dataUrl, phone);
         
         if (publicUrl) {
-          console.log("Successfully saved to Supabase:", publicUrl);
+          console.log("Successfully saved to Supabase Storage:", publicUrl);
           
+          // --- NEW: Update the lead record in Supabase Database! ---
+          await updateLeadImageInSupabase(phone, publicUrl);
+
           // Send this URL to Google Apps Script via our Backend
           await fetch('/api/v1/update-lead-image', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ phone, imageUrl: publicUrl })
           });
-          console.log("Successfully pushed URL to Google Sheets!");
+          console.log("Successfully pushed URL to Google Sheets & Supabase DB!");
         }
       } catch (err) {
         console.error("Failed to upload background collage:", err);

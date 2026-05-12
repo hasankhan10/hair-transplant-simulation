@@ -86,6 +86,17 @@ const App: React.FC = () => {
       setResult(null);
       setError(null);
       setParams(prev => ({ ...prev, mask: undefined }));
+
+      // --- TRACKING: Photo Uploaded ---
+      try {
+        const userDataStr = localStorage.getItem('drpaul_user_data');
+        if (userDataStr) {
+          const { phone } = JSON.parse(userDataStr);
+          const { updateJourneyStatus } = await import('./services/supabase');
+          await updateJourneyStatus(phone, 'Photo Uploaded');
+        }
+      } catch (e) { console.error(e); }
+
     } catch (err: any) {
       console.error("Upload/Validation failed:", err);
       setError(err.message || "An error occurred during medical validation.");
@@ -100,11 +111,21 @@ const App: React.FC = () => {
     }
   };
 
-  const handleSaveMask = (mask: string) => {
+  const handleSaveMask = async (mask: string) => {
     setParams(prev => ({
       ...prev,
       mask
     }));
+
+    // --- TRACKING: Area Mapped ---
+    try {
+      const userDataStr = localStorage.getItem('drpaul_user_data');
+      if (userDataStr) {
+        const { phone } = JSON.parse(userDataStr);
+        const { updateJourneyStatus } = await import('./services/supabase');
+        await updateJourneyStatus(phone, 'Area Mapped');
+      }
+    } catch (e) { console.error(e); }
   };
 
   const [processingProgress, setProcessingProgress] = useState(0);
@@ -117,6 +138,16 @@ const App: React.FC = () => {
     setError(null);
     setProcessingProgress(0);
     setProcessingStatus('Analyzing Scalp & Hair Pattern...');
+
+    // --- TRACKING: Generating Simulation ---
+    try {
+      const userDataStr = localStorage.getItem('drpaul_user_data');
+      if (userDataStr) {
+        const { phone } = JSON.parse(userDataStr);
+        const { updateJourneyStatus } = await import('./services/supabase');
+        await updateJourneyStatus(phone, 'Generating Simulation');
+      }
+    } catch (e) { console.error(e); }
 
     // Simulated progress updates for a more professional feel
     const progressInterval = setInterval(() => {

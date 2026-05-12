@@ -12,9 +12,11 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ onLogout }) => {
     <div className="min-h-screen bg-slate-50 flex">
       {/* Sidebar */}
       <aside className="w-64 bg-slate-900 text-white flex flex-col shadow-2xl z-20 hidden md:flex shrink-0 fixed h-full">
-        <div className="p-6 border-b border-slate-800">
-          <h2 className="text-xl font-bold font-poppins tracking-wide">Dr. Paul's</h2>
-          <p className="text-xs text-slate-400 mt-1 uppercase tracking-widest">CRM Dashboard</p>
+        <div className="p-6 border-b border-slate-800 flex flex-col items-center justify-center">
+          <div className="bg-white rounded-xl p-2 shadow-lg mb-3 w-full flex justify-center">
+             <img src="/logo_white.png" alt="Dr Paul's Logo" className="h-10 w-auto object-contain" />
+          </div>
+          <p className="text-xs text-slate-400 uppercase tracking-widest font-semibold">CRM Dashboard</p>
         </div>
         
         <nav className="flex-1 py-6 px-4 space-y-2">
@@ -46,8 +48,10 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ onLogout }) => {
       <main className="flex-1 md:ml-64 bg-slate-50 min-h-screen flex flex-col">
         {/* Mobile Header */}
         <header className="md:hidden bg-slate-900 text-white p-4 flex justify-between items-center sticky top-0 z-30 shadow-md">
-          <h2 className="font-bold">Dr. Paul's CRM</h2>
-          <button onClick={onLogout} className="text-sm text-slate-300 hover:text-white">Logout</button>
+          <div className="bg-white rounded-lg p-1">
+             <img src="/logo_white.png" alt="Dr Paul's Logo" className="h-6 w-auto object-contain" />
+          </div>
+          <button onClick={onLogout} className="text-sm text-slate-300 hover:text-white font-medium">Logout</button>
         </header>
 
         <div className="p-4 md:p-8 flex-1 overflow-auto">

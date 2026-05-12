@@ -114,6 +114,15 @@ const LeadCaptureModal: React.FC<LeadCaptureModalProps> = ({ onComplete }) => {
             if (response.ok) {
                 localStorage.setItem('drpaul_lead_captured', 'true');
                 localStorage.setItem('drpaul_user_data', JSON.stringify(formData));
+                
+                // --- NEW: Dual Write to Supabase! ---
+                try {
+                    const { createLeadInSupabase } = await import('../services/supabase');
+                    await createLeadInSupabase(formData);
+                } catch (e) {
+                    console.error("Failed to write to Supabase:", e);
+                }
+
                 setIsVisible(false);
                 onComplete(formData);
             }
