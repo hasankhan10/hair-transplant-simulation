@@ -37,27 +37,7 @@ const getBase64Data = (dataUrl: string): { data: string; mimeType: string } => {
     return { data, mimeType };
 };
 
-/**
- * Fetches and encodes ONE Master Reference image for the selected density from the local filesystem.
- */
-async function getMasterReferenceServer(density: string): Promise<{ data: string; mimeType: string } | null> {
-    const densityKey = (density || 'medium').toLowerCase();
-    const fileExtensions = ['.jpg', '.JPG', '.jpeg', '.png'];
-    const publicPath = path.join(__dirname, '../public');
 
-    for (const ext of fileExtensions) {
-        try {
-            const filePath = path.join(publicPath, 'references', 'density', densityKey, `1${ext}`);
-            const fs = await import('fs/promises');
-            const buffer = await fs.readFile(filePath);
-            const mimeType = ext.endsWith('png') ? 'image/png' : 'image/jpeg';
-            return { data: buffer.toString('base64'), mimeType };
-        } catch (e) {
-            continue;
-        }
-    }
-    return null;
-}
 
 /**
  * Server-side image composition using Sharp
@@ -352,7 +332,6 @@ app.post('/api/v1/simulate', async (req, res) => {
 
         // --- 3. RUN SIMULATION ---
         const densityLabel = (density || "MEDIUM").toUpperCase();
-        const masterRef = await getMasterReferenceServer(densityLabel);
 
         const prompt = `ROLE: MEDICAL HAIR VISUALIZATION SPECIALIST.
 MISSION: HARMONIOUS SURGICAL RESTORATION.
@@ -360,10 +339,12 @@ MISSION: HARMONIOUS SURGICAL RESTORATION.
    - LIGHTING INTEGRATION: Analyze the light source, shadows, and highlights of the patient's photo. Apply the EXACT same lighting to the new hair so it melts into the donor hair perfectly.
    - NATURAL HANDSHAKE: Do not create a "box" or "patch". Taper the density at the mask edges to blend seamlessly with the patient's real hair.
    - DIRECTIONAL FLOW: Follow the patient's natural hair direction (forward at forehead, swirl at crown) with 100% precision.
-2. DENSITY MAPPING (MASTER REFERENCE):
-   - [MASTER CLINICAL REFERENCE]: Use this image STRICTLY to understand how close together the hair follicles should be (the numerical density). 
-   - CRITICAL FATAL ERROR WARNING: DO NOT EVER COPY OR PASTE ANY PIXELS OR HAIR FROM THE REFERENCE IMAGE. Do not use its hair color, do not use its lighting. It is ONLY a mathematical reference for thickness.
-   - OPAQUE CORE, SOFT EDGES: The center of the mask should follow high frequency follicle counts, while the perimeter must be soft and tapered.
+2. DENSITY MAPPING (TARGET: ${densityLabel} DENSITY):
+   - You must generate hair matching a ${densityLabel} density profile.
+   - If LOW: Create sparse follicular coverage (approx 25-30 grafts/cm²). The scalp skin should be clearly visible between the hairs.
+   - If MEDIUM: Create standard coverage (approx 40-45 grafts/cm²). Moderate thickness with slight scalp visibility under direct light.
+   - If HIGH: Create dense, thick coverage (approx 50+ grafts/cm²). Very little to no scalp visibility.
+   - OPAQUE CORE, SOFT EDGES: The center of the mask should follow the targeted density, while the perimeter must be softly feathered to blend with native hair.
 3. IDENTITY PRESERVATION (PATIENT PHOTO IS THE ONLY VISUAL SOURCE):
    - [PRIMARY PATIENT PHOTO] is the exclusive source for DNA.
    - You MUST generate BRAND NEW hair that perfectly matches the PATIENT'S EXACT hair color, texture, and wave.
@@ -380,16 +361,9 @@ FINAL OUTPUT: A realistic medical simulation. ${densityLabel} DENSITY. NO YELLOW
 
         const parts: any[] = [];
 
-        // Add Master Reference first (Context)
-        if (masterRef) {
-            parts.push({ text: "[MASTER CLINICAL DENSITY REFERENCE - FOR DATA ONLY]" });
-            parts.push({
-                inlineData: {
-                    data: masterRef.data,
-                    mimeType: masterRef.mimeType
-                }
-            });
-        }
+        // Note: We deliberately do NOT attach the masterRef image anymore.
+        // As proven by testing, sending a second image absolutely forces Gemini to copy-paste the reference hair wig.
+        // We rely entirely on the textual density description.
 
         // Add Patient (Identity)
         parts.push({ text: "[PRIMARY PATIENT PHOTO - USE THIS FOR ALL PIXELS AND IDENTITY]" });
@@ -424,27 +398,16 @@ FINAL OUTPUT: A realistic medical simulation. ${densityLabel} DENSITY. NO YELLOW
             return res.status(500).json({ success: false, error: "AI failed to generate results" });
         }
 
-        // --- 4. FINAL COMPOSITION ---
-        let finalImageBase64 = aiResultB64;
-        if (mask) {
-            const finalBuffer = await compositeStrictResultServer(
-                Buffer.from(patientBase64, 'base64'),
-                Buffer.from(aiResultB64, 'base64'),
-                Buffer.from(getBase64Data(mask).data, 'base64')
-            );
-            finalImageBase64 = finalBuffer.toString('base64');
-            aiMime = 'image/png';
-        }
-
-        // --- 5. AI QUALITY CONTROL (QA) CHECK ---
-        const qcPrompt = "Analyze this hair transplant simulation result. Does the added hair look highly realistic, naturally blended, and free of artificial boundaries? Answer ONLY 'PASS' if it looks photorealistic and acceptable. Answer ONLY 'FAIL' if there is any visible yellow/green paint, if the hair looks like a pasted patch/wig, if it is floating, or if it clearly looks unnatural/disjointed.";
+        // --- 4. AI QUALITY CONTROL (QA) CHECK BEFORE COMPOSITION ---
+        // The user specifically requested to check the raw AI simulation BEFORE wasting resources compositing it.
+        const qcPrompt = "Analyze this hair transplant simulation result. Is it at least a reasonable attempt at adding hair to the scalp? Answer ONLY 'PASS' if it looks like a person with hair added. HOWEVER, answer ONLY 'FAIL' if the new hair looks like a solid black block, a literal wig pasted on, or if there is a harsh white/grey background border cutting through the hair. Reject obvious copy-pasted blocks.";
         
         const qcResult = await ai.models.generateContent({
             model: MODEL_NAME,
             contents: [{
                 parts: [
                     { text: qcPrompt },
-                    { inlineData: { data: finalImageBase64, mimeType: aiMime } }
+                    { inlineData: { data: aiResultB64, mimeType: aiMime } }
                 ]
             }]
         });
@@ -461,6 +424,19 @@ FINAL OUTPUT: A realistic medical simulation. ${densityLabel} DENSITY. NO YELLOW
                 success: false, 
                 error: "The AI generated an unnatural result. Please click Generate Simulation again for a better outcome." 
             });
+        }
+
+        // --- 5. FINAL COMPOSITION ---
+        // We only reach this step if the simulation PASSED the quality check above!
+        let finalImageBase64 = aiResultB64;
+        if (mask) {
+            const finalBuffer = await compositeStrictResultServer(
+                Buffer.from(patientBase64, 'base64'),
+                Buffer.from(aiResultB64, 'base64'),
+                Buffer.from(getBase64Data(mask).data, 'base64')
+            );
+            finalImageBase64 = finalBuffer.toString('base64');
+            aiMime = 'image/png';
         }
 
         res.json({

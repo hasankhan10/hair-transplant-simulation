@@ -15,7 +15,14 @@ const LeadsList: React.FC = () => {
       .channel('public:leads')
       .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, (payload) => {
         console.log('Realtime update received!', payload);
-        fetchLeads(); // Re-fetch all leads to ensure correct sorting and full data
+        
+        if (payload.eventType === 'INSERT') {
+          setLeads(prev => [payload.new, ...prev]);
+        } else if (payload.eventType === 'UPDATE') {
+          setLeads(prev => prev.map(lead => lead.id === payload.new.id ? payload.new : lead));
+        } else if (payload.eventType === 'DELETE') {
+          setLeads(prev => prev.filter(lead => lead.id !== payload.old.id));
+        }
       })
       .subscribe();
 
