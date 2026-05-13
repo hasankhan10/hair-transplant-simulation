@@ -41,8 +41,6 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, isLoading, setLeads, initi
         return <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-bold whitespace-nowrap">Photo Uploaded</span>;
       case 'Area Mapped':
         return <span className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-xs font-bold whitespace-nowrap">Area Mapped</span>;
-      case 'Generating Simulation':
-        return <span className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold whitespace-nowrap">Generating...</span>;
       case 'Simulation Completed':
         return <span className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-bold whitespace-nowrap">Simulation Completed</span>;
       default:

@@ -138,14 +138,7 @@ const App: React.FC = () => {
     setProcessingProgress(0);
     setProcessingStatus('Analyzing Scalp & Hair Pattern...');
 
-    // --- TRACKING: Generating Simulation ---
-    try {
-      const userDataStr = localStorage.getItem('drpaul_user_data');
-      if (userDataStr) {
-        const { phone } = JSON.parse(userDataStr);
-        await updateJourneyStatus(phone, 'Generating Simulation');
-      }
-    } catch (e) { console.error(e); }
+
 
     // Simulated progress updates for a more professional feel
     const progressInterval = setInterval(() => {
