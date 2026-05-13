@@ -6,8 +6,8 @@ const AdminCRM: React.FC = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
-    // Check if previously authenticated in this session
-    const authStatus = sessionStorage.getItem('drpaul_admin_auth');
+    // Check if previously authenticated
+    const authStatus = localStorage.getItem('drpaul_admin_auth');
     if (authStatus === 'true') {
       setIsAuthenticated(true);
     }
@@ -15,12 +15,12 @@ const AdminCRM: React.FC = () => {
 
   const handleLogin = () => {
     setIsAuthenticated(true);
-    sessionStorage.setItem('drpaul_admin_auth', 'true');
+    localStorage.setItem('drpaul_admin_auth', 'true');
   };
 
   const handleLogout = () => {
     setIsAuthenticated(false);
-    sessionStorage.removeItem('drpaul_admin_auth');
+    localStorage.removeItem('drpaul_admin_auth');
   };
 
   if (!isAuthenticated) {
