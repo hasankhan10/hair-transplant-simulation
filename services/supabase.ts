@@ -54,11 +54,15 @@ export const createLeadInSupabase = async (leadData: { name: string, age: string
   }
 };
 
-export const updateLeadImageInSupabase = async (phone: string, imageUrl: string) => {
+export const updateLeadImageInSupabase = async (phone: string, imageUrl: string, density?: string) => {
   try {
     const { data, error } = await supabase
       .from('leads')
-      .update({ simulation_image_url: imageUrl, journey_status: 'Simulation Completed' })
+      .update({ 
+        simulation_image_url: imageUrl, 
+        density: density,
+        journey_status: 'Simulation Completed' 
+      })
       .eq('phone', phone);
     if (error) console.error("Error updating lead image in Supabase:", error);
   } catch (err) {

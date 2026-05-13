@@ -228,6 +228,7 @@ const App: React.FC = () => {
                 currentMask={params.mask || null}
                 progress={processingProgress}
                 status={processingStatus}
+                density={params.density}
               />
             </div>
           </div>

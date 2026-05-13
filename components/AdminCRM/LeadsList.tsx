@@ -191,9 +191,7 @@ const LeadsList: React.FC = () => {
         <LeadDetailModal 
           lead={{
             ...selectedLead,
-            timestamp: selectedLead.created_at,
-            generatedImage: selectedLead.simulation_image_url,
-            originalImage: null // We don't save the original image to DB to save space
+            timestamp: selectedLead.created_at
           }} 
           onClose={() => setSelectedLead(null)} 
         />

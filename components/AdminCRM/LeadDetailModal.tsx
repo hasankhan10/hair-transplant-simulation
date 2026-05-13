@@ -56,6 +56,10 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose }) => {
                   <p className="text-xs text-slate-500">Age / Gender</p>
                   <p className="text-sm font-medium text-slate-700">{lead.age || 'N/A'} / {lead.gender || 'N/A'}</p>
                 </div>
+                <div>
+                  <p className="text-xs text-slate-500 uppercase font-bold tracking-tighter">Target Density</p>
+                  <p className="text-sm font-black text-primary uppercase">{lead.density || 'PENDING'}</p>
+                </div>
               </div>
 
             </div>
@@ -64,10 +68,10 @@ const LeadDetailModal: React.FC<LeadDetailModalProps> = ({ lead, onClose }) => {
             <div className="lg:col-span-2 flex flex-col">
               <h3 className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-4">Simulation Result (Collage)</h3>
               
-              {lead.generatedImage ? (
+              {lead.simulation_image_url ? (
                 <div className="bg-slate-100 rounded-xl overflow-hidden border-2 border-primary/30 shadow-lg flex-1 flex items-center justify-center relative p-2">
                   <img 
-                    src={lead.generatedImage} 
+                    src={lead.simulation_image_url} 
                     alt="Simulation Collage" 
                     className="max-w-full max-h-[60vh] object-contain rounded-lg shadow-sm" 
                   />

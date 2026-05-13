@@ -14,6 +14,7 @@ interface ImageDisplayProps {
   currentMask: string | null;
   progress: number;
   status: string;
+  density?: string;
 }
 
 const ImageDisplay: React.FC<ImageDisplayProps> = ({
@@ -26,7 +27,8 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
   onSaveMask,
   currentMask,
   progress,
-  status
+  status,
+  density
 }) => {
   const [activeTab, setActiveTab] = useState<'comparison' | 'result' | 'original'>('comparison');
   const [isDownloading, setIsDownloading] = useState(false);
@@ -175,8 +177,11 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
         if (publicUrl) {
           console.log("Successfully saved to Supabase Storage:", publicUrl);
           
+          // Clean up density string for DB
+          const cleanDensity = density?.split(' ')[0] || 'Medium';
+          
           // --- NEW: Update the lead record in Supabase Database! ---
-          await updateLeadImageInSupabase(phone, publicUrl);
+          await updateLeadImageInSupabase(phone, publicUrl, cleanDensity);
 
           // Send this URL to Google Apps Script via our Backend
           await fetch('/api/v1/update-lead-image', {
