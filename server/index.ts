@@ -436,6 +436,33 @@ FINAL OUTPUT: A realistic medical simulation. ${densityLabel} DENSITY. NO YELLOW
             aiMime = 'image/png';
         }
 
+        // --- 5. AI QUALITY CONTROL (QA) CHECK ---
+        const qcPrompt = "Analyze this hair transplant simulation result. Does the added hair look highly realistic, naturally blended, and free of artificial boundaries? Answer ONLY 'PASS' if it looks photorealistic and acceptable. Answer ONLY 'FAIL' if there is any visible yellow/green paint, if the hair looks like a pasted patch/wig, if it is floating, or if it clearly looks unnatural/disjointed.";
+        
+        const qcResult = await ai.models.generateContent({
+            model: MODEL_NAME,
+            contents: [{
+                parts: [
+                    { text: qcPrompt },
+                    { inlineData: { data: finalImageBase64, mimeType: aiMime } }
+                ]
+            }]
+        });
+
+        let qcText = "";
+        if (qcResult.candidates?.[0]?.content?.parts) {
+            for (const part of qcResult.candidates[0].content.parts) {
+                if ('text' in part) qcText += part.text;
+            }
+        }
+
+        if (qcText.toUpperCase().includes("FAIL")) {
+            return res.status(400).json({ 
+                success: false, 
+                error: "The AI generated an unnatural result. Please click Generate Simulation again for a better outcome." 
+            });
+        }
+
         res.json({
             success: true,
             resultImage: `data:${aiMime};base64,${finalImageBase64}`
