@@ -1,55 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import LeadDetailModal from './LeadDetailModal';
-import { supabase } from '../../services/supabase';
+import { supabase, updateSalesStatus, deleteLead } from '../../services/supabase';
 
-const LeadsList: React.FC = () => {
-  const [leads, setLeads] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+interface LeadsListProps {
+  leads: any[];
+  isLoading: boolean;
+  setLeads: React.Dispatch<React.SetStateAction<any[]>>;
+  initialFilter: string | null;
+}
+
+const LeadsList: React.FC<LeadsListProps> = ({ leads, isLoading, setLeads, initialFilter }) => {
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<string | null>(initialFilter);
 
   useEffect(() => {
-    fetchLeads();
-
-    // Set up Realtime Subscription
-    const channel = supabase
-      .channel('public:leads')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'leads' }, (payload) => {
-        console.log('Realtime update received!', payload);
-        
-        if (payload.eventType === 'INSERT') {
-          setLeads(prev => [payload.new, ...prev]);
-        } else if (payload.eventType === 'UPDATE') {
-          setLeads(prev => prev.map(lead => lead.id === payload.new.id ? payload.new : lead));
-        } else if (payload.eventType === 'DELETE') {
-          setLeads(prev => prev.filter(lead => lead.id !== payload.old.id));
-        }
-      })
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, []);
-
-  const fetchLeads = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase
-        .from('leads')
-        .select('*')
-        .order('created_at', { ascending: false });
-
-      if (error) {
-        console.error('Error fetching leads:', error);
-      } else if (data) {
-        setLeads(data);
-      }
-    } catch (err) {
-      console.error('Unexpected error fetching leads:', err);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    setStatusFilter(initialFilter);
+  }, [initialFilter]);
 
   const handleSalesStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>, phone: string) => {
     e.stopPropagation();
@@ -59,7 +26,6 @@ const LeadsList: React.FC = () => {
     setLeads(prev => prev.map(l => l.phone === phone ? { ...l, status: newStatus } : l));
     
     // Save to DB
-    const { updateSalesStatus } = await import('../../services/supabase');
     await updateSalesStatus(phone, newStatus);
   };
 
@@ -84,22 +50,53 @@ const LeadsList: React.FC = () => {
     }
   };
 
+  const filteredLeads = leads.filter(lead => {
+    const matchesSearch = lead.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          lead.phone.includes(searchTerm);
+    const matchesStatus = !statusFilter || (lead.status || 'New Lead') === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-      <div className="p-6 border-b border-slate-200 flex justify-between items-center">
+      <div className="p-6 border-b border-slate-200 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-          <h2 className="text-lg font-bold text-slate-800 font-poppins">Recent Leads</h2>
+          <h2 className="text-lg font-bold text-slate-800 font-poppins">
+            {statusFilter ? `${statusFilter} Leads` : 'All Recent Leads'}
+          </h2>
           <p className="text-sm text-slate-500">Monitor live journeys and update sales status.</p>
         </div>
-        <div className="flex space-x-2">
-          <input 
-            type="text" 
-            placeholder="Search leads..." 
-            className="px-4 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:border-primary"
-          />
-          <button className="px-4 py-2 bg-slate-100 text-slate-600 rounded-lg text-sm font-medium hover:bg-slate-200 transition">
-            Filter
-          </button>
+        <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+          <div className="relative flex-1 md:flex-none">
+            <svg className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" /></svg>
+            <input 
+              type="text" 
+              placeholder="Search by name or phone..." 
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-full"
+            />
+          </div>
+          <select 
+            value={statusFilter || ''} 
+            onChange={(e) => setStatusFilter(e.target.value || null)}
+            className="px-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-600 focus:outline-none focus:ring-2 focus:ring-primary/20"
+          >
+            <option value="">All Statuses</option>
+            <option value="New Lead">New Lead</option>
+            <option value="Contacted">Contacted</option>
+            <option value="Interested">Interested</option>
+            <option value="Appointment Booked">Appointment Booked</option>
+            <option value="Not Interested">Not Interested</option>
+          </select>
+          {statusFilter && (
+            <button 
+              onClick={() => setStatusFilter(null)}
+              className="text-xs font-bold text-primary hover:underline px-2"
+            >
+              Clear
+            </button>
+          )}
         </div>
       </div>
 
@@ -120,12 +117,12 @@ const LeadsList: React.FC = () => {
               <tr>
                 <td colSpan={6} className="p-8 text-center text-slate-500">Loading leads...</td>
               </tr>
-            ) : leads.length === 0 ? (
+            ) : filteredLeads.length === 0 ? (
               <tr>
-                <td colSpan={6} className="p-8 text-center text-slate-500">No leads found. Waiting for new submissions.</td>
+                <td colSpan={6} className="p-8 text-center text-slate-500">No leads found matching your criteria.</td>
               </tr>
             ) : (
-              leads.map((lead) => (
+              filteredLeads.map((lead) => (
                 <tr 
                   key={lead.id} 
                   className="hover:bg-slate-50 transition cursor-pointer"
@@ -167,9 +164,7 @@ const LeadsList: React.FC = () => {
                         onClick={async (e) => {
                           e.stopPropagation();
                           if (window.confirm(`Are you sure you want to completely delete ${lead.name}'s data and generated images? This cannot be undone.`)) {
-                            const { deleteLead } = await import('../../services/supabase');
                             await deleteLead(lead.phone);
-                            // Optimistic UI update, though realtime will also catch it
                             setLeads(prev => prev.filter(l => l.phone !== lead.phone));
                           }
                         }}

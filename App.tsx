@@ -16,6 +16,7 @@ import HowItWorksModal from './components/HowItWorksModal';
 import LeadCaptureModal from './components/LeadCaptureModal';
 import { autoCropToHead } from './services/imageProcessor';
 import { generateHairVisualization, validateScalpImage } from './services/geminiService';
+import { updateJourneyStatus } from './services/supabase';
 
 const App: React.FC = () => {
   const [patientImage, setPatientImage] = useState<string | null>(null);
@@ -92,7 +93,6 @@ const App: React.FC = () => {
         const userDataStr = localStorage.getItem('drpaul_user_data');
         if (userDataStr) {
           const { phone } = JSON.parse(userDataStr);
-          const { updateJourneyStatus } = await import('./services/supabase');
           await updateJourneyStatus(phone, 'Photo Uploaded');
         }
       } catch (e) { console.error(e); }
@@ -122,7 +122,6 @@ const App: React.FC = () => {
       const userDataStr = localStorage.getItem('drpaul_user_data');
       if (userDataStr) {
         const { phone } = JSON.parse(userDataStr);
-        const { updateJourneyStatus } = await import('./services/supabase');
         await updateJourneyStatus(phone, 'Area Mapped');
       }
     } catch (e) { console.error(e); }
@@ -144,7 +143,6 @@ const App: React.FC = () => {
       const userDataStr = localStorage.getItem('drpaul_user_data');
       if (userDataStr) {
         const { phone } = JSON.parse(userDataStr);
-        const { updateJourneyStatus } = await import('./services/supabase');
         await updateJourneyStatus(phone, 'Generating Simulation');
       }
     } catch (e) { console.error(e); }

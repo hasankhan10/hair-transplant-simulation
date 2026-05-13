@@ -2,6 +2,7 @@
 import React, { useState } from 'react';
 import { VisualizationResult } from '../types';
 import SurgicalCanvas from './SurgicalCanvas';
+import { uploadSimulationImage, updateLeadImageInSupabase } from '../services/supabase';
 
 interface ImageDisplayProps {
   beforeImage: string | null;
@@ -171,7 +172,6 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
         const phone = userDataStr ? JSON.parse(userDataStr).phone : 'unknown';
 
         console.log("Uploading to Supabase...");
-        const { uploadSimulationImage, updateLeadImageInSupabase } = await import('../services/supabase');
         const publicUrl = await uploadSimulationImage(dataUrl, phone);
         
         if (publicUrl) {
