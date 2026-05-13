@@ -333,31 +333,22 @@ app.post('/api/v1/simulate', async (req, res) => {
         // --- 3. RUN SIMULATION ---
         const densityLabel = (density || "MEDIUM").toUpperCase();
 
-        const prompt = `ROLE: MEDICAL HAIR VISUALIZATION SPECIALIST.
-MISSION: HARMONIOUS SURGICAL RESTORATION.
-1. BIOLOGICAL HARMONY (PRIORITY #1):
-   - LIGHTING INTEGRATION: Analyze the light source, shadows, and highlights of the patient's photo. Apply the EXACT same lighting to the new hair so it melts into the donor hair perfectly.
-   - NATURAL HANDSHAKE: Do not create a "box" or "patch". Taper the density at the mask edges to blend seamlessly with the patient's real hair.
-   - DIRECTIONAL FLOW: Follow the patient's natural hair direction (forward at forehead, swirl at crown) with 100% precision.
-2. DENSITY MAPPING (TARGET: ${densityLabel} DENSITY):
-   - You must generate hair matching a ${densityLabel} density profile.
-   - If LOW: Create sparse follicular coverage (approx 25-30 grafts/cm²). The scalp skin should be clearly visible between the hairs.
-   - If MEDIUM: Create standard coverage (approx 40-45 grafts/cm²). Moderate thickness with slight scalp visibility under direct light.
-   - If HIGH: Create dense, thick coverage (approx 50+ grafts/cm²). Very little to no scalp visibility.
-   - OPAQUE CORE, SOFT EDGES: The center of the mask should follow the targeted density, while the perimeter must be softly feathered to blend with native hair.
-3. IDENTITY PRESERVATION (PATIENT PHOTO IS THE ONLY VISUAL SOURCE):
-   - [PRIMARY PATIENT PHOTO] is the exclusive source for DNA.
-   - You MUST generate BRAND NEW hair that perfectly matches the PATIENT'S EXACT hair color, texture, and wave.
-   - IGNORE CURRENT THINNING: Restore the area as a successful, fully-grown result using the patient's own biological hair characteristics.
-4. ANATOMY & FRONTOTEMPORAL DESIGN:
-   - FRONTAL HAIRLINE: Create an irregular, organic, "micro-jagged" line. No straight lines.
-   - TEMPORAL CLOSURE: Populate the frontotemporal corners and peaks densely.
-5. THE YELLOW HIGHLIGHT MASK (CRITICAL INSTRUCTION):
-   - The semi-transparent yellow highlighted area on the image indicates exactly where the new hair must go.
-   - FATAL ERROR WARNING: YOU MUST COMPLETELY REPLACE THE YELLOW HIGHLIGHT WITH REALISTIC HAIR. 
-   - DO NOT LEAVE ANY YELLOW TINT VISIBLE IN THE FINAL IMAGE. The final image must look 100% natural with NO yellow pixels.
-6. Treat the yellow highlighted area as strictly the area where hair needs to be added. Do not add hair outside the highlighted area.
-FINAL OUTPUT: A realistic medical simulation. ${densityLabel} DENSITY. NO YELLOW VISIBLE. INVISIBLE SEAMS.`;
+        const prompt = `ROLE: EXPERT MEDICAL HAIR RESTORATION AI
+TASK: Perform a photorealistic surgical hair transplant simulation.
+
+INSTRUCTIONS:
+1. TARGET AREA: The semi-transparent yellow highlighted area marks the EXACT recipient zone. You must fill this entire yellow area with new, naturally growing hair.
+2. PATIENT DNA: Analyze the patient's existing hair in the photo. The new hair MUST perfectly match their exact biological hair color, texture, wave pattern, and lighting.
+3. DENSITY TARGET (${densityLabel}): 
+   - LOW: Sparse coverage (25-30 grafts/cm²), scalp clearly visible.
+   - MEDIUM: Standard coverage (40-45 grafts/cm²), slight scalp visibility.
+   - HIGH: Dense coverage (50+ grafts/cm²), no scalp visible.
+4. BLENDING: The new hair must taper and feather flawlessly into the surrounding native hair. Create a natural, irregular, micro-jagged frontal hairline. No straight or artificial lines.
+
+CRITICAL CONSTRAINTS:
+- You must physically generate and add new hair. Returning the original bald image is a failure.
+- Completely remove and replace the yellow tint. No yellow pixels may remain.
+- The final output must be a seamless, photorealistic medical simulation.`;
 
         const parts: any[] = [];
 
@@ -400,7 +391,7 @@ FINAL OUTPUT: A realistic medical simulation. ${densityLabel} DENSITY. NO YELLOW
 
         // --- 4. AI QUALITY CONTROL (QA) CHECK BEFORE COMPOSITION ---
         // The user specifically requested to check the raw AI simulation BEFORE wasting resources compositing it.
-        const qcPrompt = "Analyze this hair transplant simulation result. Is it at least a reasonable attempt at adding hair to the scalp? Answer ONLY 'PASS' if it looks like a person with hair added. HOWEVER, answer ONLY 'FAIL' if the new hair looks like a solid black block, a literal wig pasted on, or if there is a harsh white/grey background border cutting through the hair. Reject obvious copy-pasted blocks.";
+        const qcPrompt = "Analyze this hair transplant simulation result. Is it at least a reasonable attempt at adding hair to the scalp? Answer ONLY 'PASS' if it successfully added new hair. HOWEVER, answer ONLY 'FAIL' if ANY of these are true: 1) NO new hair was added (it still looks completely bald in the target area), 2) the new hair looks like a solid black block or a literal wig pasted on, 3) there is a harsh white/grey background border cutting through the hair. Reject obvious failures or unchanged bald heads.";
         
         const qcResult = await ai.models.generateContent({
             model: MODEL_NAME,
