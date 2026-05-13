@@ -340,9 +340,9 @@ INSTRUCTIONS:
 1. TARGET AREA (CRITICAL): The solid neon green mask marks the EXACT recipient zone. You must completely cover and fill this ENTIRE green area with new, naturally growing hair. Do NOT leave a single green pixel exposed. Every area that is currently green MUST become hair.
 2. NATIVE HAIR CLONING: You must visually extract, clone, and synthesize the texture of the hair from the sides and back of the patient's head in the photo. Use this exact cloned texture to fill the green area. Do NOT use outside references.
 3. DENSITY TARGET (${densityLabel}): 
-   - LOW: Sparse coverage (25-30 grafts/cm²), scalp clearly visible.
-   - MEDIUM: Standard coverage (40-45 grafts/cm²), slight scalp visibility.
-   - HIGH: Dense coverage (50+ grafts/cm²), no scalp visible.
+   - LOW: Sparse coverage (30-35 grafts/cm²), scalp clearly visible.
+   - MEDIUM: Standard coverage (45-50 grafts/cm²), slight scalp visibility.
+   - HIGH: Dense coverage (60+ grafts/cm²), no scalp visible.
 4. BLENDING: The new hair must taper and feather flawlessly into the surrounding native hair. Create a natural, irregular, micro-jagged frontal hairline. No straight or artificial lines.
 
 CRITICAL CONSTRAINTS:
