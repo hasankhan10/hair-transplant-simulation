@@ -306,24 +306,24 @@ app.post('/api/v1/simulate', async (req, res) => {
 
             const metadata = await sharp(patBuffer).metadata();
 
-            // Create a semi-transparent yellow highlight layer
+            // Create a solid neon green mask layer
             const highlightLayer = await sharp({
                 create: {
                     width: metadata.width!,
                     height: metadata.height!,
                     channels: 4,
-                    background: { r: 255, g: 255, b: 0, alpha: 0.3 }
+                    background: { r: 0, g: 255, b: 0, alpha: 1 } // Solid Neon Green
                 }
             }).png().toBuffer();
 
             // Mask the highlight layer with the user's mask
-            const yellowMask = await sharp(highlightLayer)
+            const greenMask = await sharp(highlightLayer)
                 .composite([{ input: maskBuffer, blend: 'dest-in' }])
                 .toBuffer();
 
             // Composite onto patient image
             const aiInputBuffer = await sharp(patBuffer)
-                .composite([{ input: yellowMask, top: 0, left: 0 }])
+                .composite([{ input: greenMask, top: 0, left: 0 }])
                 .toBuffer();
 
             inputImageBase64 = aiInputBuffer.toString('base64');
@@ -333,12 +333,12 @@ app.post('/api/v1/simulate', async (req, res) => {
         // --- 3. RUN SIMULATION ---
         const densityLabel = (density || "MEDIUM").toUpperCase();
 
-        const prompt = `ROLE: EXPERT MEDICAL HAIR RESTORATION AI
+const prompt = `ROLE: EXPERT MEDICAL HAIR RESTORATION AI
 TASK: Perform a photorealistic surgical hair transplant simulation.
 
 INSTRUCTIONS:
-1. TARGET AREA: The semi-transparent yellow highlighted area marks the EXACT recipient zone. You must fill this entire yellow area with new, naturally growing hair.
-2. PATIENT DNA: Analyze the patient's existing hair in the photo. The new hair MUST perfectly match their exact biological hair color, texture, wave pattern, and lighting.
+1. TARGET AREA (CRITICAL): The solid neon green mask marks the EXACT recipient zone. You must completely cover and fill this ENTIRE green area with new, naturally growing hair. Do NOT leave a single green pixel exposed. Every area that is currently green MUST become hair.
+2. NATIVE HAIR CLONING: You must visually extract, clone, and synthesize the texture of the hair from the sides and back of the patient's head in the photo. Use this exact cloned texture to fill the green area. Do NOT use outside references.
 3. DENSITY TARGET (${densityLabel}): 
    - LOW: Sparse coverage (25-30 grafts/cm²), scalp clearly visible.
    - MEDIUM: Standard coverage (40-45 grafts/cm²), slight scalp visibility.
@@ -346,8 +346,8 @@ INSTRUCTIONS:
 4. BLENDING: The new hair must taper and feather flawlessly into the surrounding native hair. Create a natural, irregular, micro-jagged frontal hairline. No straight or artificial lines.
 
 CRITICAL CONSTRAINTS:
-- You must physically generate and add new hair. Returning the original bald image is a failure.
-- Completely remove and replace the yellow tint. No yellow pixels may remain.
+- FATAL ERROR: You MUST physically draw/generate new hair over the solid neon green mask. Returning the original image with a bald green patch is a complete failure.
+- NO GREEN ALLOWED: Completely remove and replace the green tint. No green pixels may remain anywhere on the image. Every green pixel must be replaced by hair or scalp.
 - The final output must be a seamless, photorealistic medical simulation.`;
 
         const parts: any[] = [];
@@ -390,8 +390,7 @@ CRITICAL CONSTRAINTS:
         }
 
         // --- 4. AI QUALITY CONTROL (QA) CHECK BEFORE COMPOSITION ---
-        // The user specifically requested to check the raw AI simulation BEFORE wasting resources compositing it.
-        const qcPrompt = "Analyze this hair transplant simulation result. Is it at least a reasonable attempt at adding hair to the scalp? Answer ONLY 'PASS' if it successfully added new hair. HOWEVER, answer ONLY 'FAIL' if ANY of these are true: 1) NO new hair was added (it still looks completely bald in the target area), 2) the new hair looks like a solid black block or a literal wig pasted on, 3) there is a harsh white/grey background border cutting through the hair. Reject obvious failures or unchanged bald heads.";
+        const qcPrompt = "Analyze this hair transplant simulation result. Answer ONLY 'PASS' if it looks like a person with new hair added. FATAL ERROR: answer ONLY 'FAIL' if ANY of these are true: 1) There is a visible green tint, green pixels, or green patch on the scalp (this means the AI failed to draw hair over the mask), 2) NO new hair was added (it still looks completely bald in the target area), 3) the new hair looks like a solid black block or a literal wig pasted on. You must reject obvious failures or unchanged bald heads with green patches.";
         
         const qcResult = await ai.models.generateContent({
             model: MODEL_NAME,
@@ -418,7 +417,6 @@ CRITICAL CONSTRAINTS:
         }
 
         // --- 5. FINAL COMPOSITION ---
-        // We only reach this step if the simulation PASSED the quality check above!
         let finalImageBase64 = aiResultB64;
         if (mask) {
             const finalBuffer = await compositeStrictResultServer(
