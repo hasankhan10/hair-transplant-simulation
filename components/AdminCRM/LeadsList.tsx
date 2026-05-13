@@ -154,7 +154,6 @@ const LeadsList: React.FC = () => {
                       <option value="Interested">Interested</option>
                       <option value="Appointment Booked">Appointment Booked</option>
                       <option value="Not Interested">Not Interested</option>
-                      <option value="Converted">Converted</option>
                     </select>
                   </td>
                   <td className="p-4">
