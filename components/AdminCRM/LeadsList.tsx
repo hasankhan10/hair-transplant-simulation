@@ -86,6 +86,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, isLoading, setLeads, initi
             <option value="Interested">Interested</option>
             <option value="Appointment Booked">Appointment Booked</option>
             <option value="Not Interested">Not Interested</option>
+            <option value="Existing patient">Existing patient</option>
           </select>
           {statusFilter && (
             <button 
@@ -149,6 +150,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, isLoading, setLeads, initi
                       <option value="Interested">Interested</option>
                       <option value="Appointment Booked">Appointment Booked</option>
                       <option value="Not Interested">Not Interested</option>
+                      <option value="Existing patient">Existing patient</option>
                     </select>
                   </td>
                   <td className="p-4">
