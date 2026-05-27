@@ -83,6 +83,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, isLoading, setLeads, initi
             <option value="">All Statuses</option>
             <option value="New Lead">New Lead</option>
             <option value="Contacted">Contacted</option>
+            <option value="Not Responded">Not Responded</option>
             <option value="Interested">Interested</option>
             <option value="Appointment Booked">Appointment Booked</option>
             <option value="Not Interested">Not Interested</option>
@@ -147,6 +148,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, isLoading, setLeads, initi
                     >
                       <option value="New Lead">New Lead</option>
                       <option value="Contacted">Contacted</option>
+                      <option value="Not Responded">Not Responded</option>
                       <option value="Interested">Interested</option>
                       <option value="Appointment Booked">Appointment Booked</option>
                       <option value="Not Interested">Not Interested</option>
