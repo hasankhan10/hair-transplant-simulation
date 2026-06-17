@@ -88,7 +88,11 @@ app.post('/api/v1/validate', async (req, res) => {
                     { text: validationPrompt },
                     { inlineData: { data: patientBase64, mimeType: patientMime } }
                 ]
-            }]
+            }],
+            config: {
+                temperature: 0.1,
+                topP: 0.9
+            }
         });
 
         let validationText = "";
@@ -331,46 +335,55 @@ app.post('/api/v1/simulate', async (req, res) => {
         }
 
         // --- 3. RUN SIMULATION ---
-        const densityLabel = (density || "MEDIUM").toUpperCase();
+        const densityLabel = (density ? String(density).split(' ')[0] : "MEDIUM").toUpperCase();
 
-const prompt = `ROLE: EXPERT MEDICAL HAIR RESTORATION AI
-TASK: Perform a photorealistic surgical hair transplant simulation.
+        const systemPrompt = `ROLE: EXPERT CLINICAL HAIR RESTORATION AI
+TASK: Perform a photorealistic, high-fidelity surgical hair transplant simulation.
 
 INSTRUCTIONS:
-1. TARGET AREA (CRITICAL): The solid neon green mask marks the EXACT recipient zone. You must completely cover and fill this ENTIRE green area with new, naturally growing hair. Do NOT leave a single green pixel exposed. Every area that is currently green MUST become hair.
-2. NATIVE HAIR CLONING: You must visually extract, clone, and synthesize the texture of the hair from the sides and back of the patient's head in the photo. Use this exact cloned texture to fill the green area. Do NOT use outside references.
-3. DENSITY TARGET (${densityLabel}): 
-   - LOW: Sparse coverage (30-35 grafts/cm²), scalp clearly visible.
-   - MEDIUM: Standard coverage (45-50 grafts/cm²), slight scalp visibility.
-   - HIGH: Dense coverage (60+ grafts/cm²), no scalp visible.
-4. BLENDING: The new hair must taper and feather flawlessly into the surrounding native hair. Create a natural, irregular, micro-jagged frontal hairline. No straight or artificial lines.
+1. RECIPIENT ZONE TARGET (CRITICAL): The solid neon green mask marks the EXACT recipient zone where the transplant is planned. You must completely replace the ENTIRE green mask area with new, naturally growing hair. Do NOT leave a single green pixel exposed. Every pixel that is currently green MUST be replaced by hair or realistic scalp shading.
+2. HAIR COLOR & HIGHLIGHT MATCHING (CRITICAL):
+   - The color of the generated hair MUST EXACTLY match the patient's native hair color.
+   - Distinguish between natural light reflections (gloss/sheen from overhead lights) and actual gray/white hair. The patient has dark/black hair; do NOT generate gray, white, or silver hair strands unless the patient's hair is already predominantly gray. Keep the hair solid black/dark.
+3. NATIVE HAIR CLONING:
+   - Visually extract, clone, and synthesize the texture, wave/curl pattern, and flow direction of the healthy hair from the donor zone (the sides and back of the patient's head).
+   - Use this cloned texture to fill the green area.
+   - IMPORTANT: Do NOT clone the thinning, balding, or sparse properties of the patient's top scalp. The new hair must be healthy, thick, robust, and fully formed.
+4. DENSITY TARGET (${densityLabel}): 
+   - LOW: Conservative hair density (30-35 grafts/cm²). The scalp is partially visible under the new hair.
+   - MEDIUM: Standard clinical density (45-50 grafts/cm²). Full, natural-looking hair coverage with minimal scalp visibility under bright light. Healthy and natural volume.
+   - HIGH: Maximum density hair restoration (60+ grafts/cm²). Generate extremely thick, dense, and voluminous hair. The scalp must be completely covered and 100% hidden under a lush layer of dense hair. Absolutely no thinning or bald spots must remain.
+5. NATURAL HAIRLINE & BLENDING:
+   - Create a natural, irregular, micro-jagged frontal hairline with individual follicular units at the edge (no straight, blocky, or artificial-looking hairpiece lines).
+   - Feather and taper the new hair flawlessly into the patient's surrounding native hair so there is no visible seam or transition boundary.
 
 CRITICAL CONSTRAINTS:
-- FATAL ERROR: You MUST physically draw/generate new hair over the solid neon green mask. Returning the original image with a bald green patch is a complete failure.
-- NO GREEN ALLOWED: Completely remove and replace the green tint. No green pixels may remain anywhere on the image. Every green pixel must be replaced by hair or scalp.
-- The final output must be a seamless, photorealistic medical simulation.`;
-
-        const parts: any[] = [];
-
-        // Note: We deliberately do NOT attach the masterRef image anymore.
-        // As proven by testing, sending a second image absolutely forces Gemini to copy-paste the reference hair wig.
-        // We rely entirely on the textual density description.
-
-        // Add Patient (Identity)
-        parts.push({ text: "[PRIMARY PATIENT PHOTO - USE THIS FOR ALL PIXELS AND IDENTITY]" });
-        parts.push({
-            inlineData: {
-                data: inputImageBase64,
-                mimeType: inputMime
-            }
-        });
-
-        // Add Command
-        parts.push({ text: prompt });
+- NO BALDNESS REMAINING: For HIGH density, you must completely cover all bald or thinning spots within the green mask. It is a failure if the area looks balding or thin after the simulation.
+- NO GREEN ALLOWED: Every neon green pixel must be completely replaced by realistic hair or scalp shading. No green tint or halo may remain.
+- The final output must be a seamless, high-resolution, photorealistic clinical simulation.`;
 
         const response = await ai.models.generateContent({
             model: MODEL_NAME,
-            contents: [{ parts }],
+            contents: [
+                {
+                    parts: [
+                        { text: "Here is the input image showing the patient with a green mask overlay marking the target recipient zone where you must draw the new hair:" },
+                        {
+                            inlineData: {
+                                data: inputImageBase64,
+                                mimeType: inputMime
+                            }
+                        }
+                    ]
+                }
+            ],
+            config: {
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                temperature: 0.2,
+                topP: 0.85
+            }
         });
 
         let aiResultB64 = "";
@@ -399,7 +412,11 @@ CRITICAL CONSTRAINTS:
                     { text: qcPrompt },
                     { inlineData: { data: aiResultB64, mimeType: aiMime } }
                 ]
-            }]
+            }],
+            config: {
+                temperature: 0.1,
+                topP: 0.9
+            }
         });
 
         let qcText = "";
