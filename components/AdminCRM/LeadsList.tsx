@@ -13,10 +13,16 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, isLoading, setLeads, initi
   const [selectedLead, setSelectedLead] = useState<any | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string | null>(initialFilter);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     setStatusFilter(initialFilter);
   }, [initialFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter]);
 
   const handleSalesStatusChange = async (e: React.ChangeEvent<HTMLSelectElement>, phone: string) => {
     e.stopPropagation();
@@ -54,6 +60,12 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, isLoading, setLeads, initi
     const matchesStatus = !statusFilter || (lead.status || 'New Lead') === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const totalLeads = filteredLeads.length;
+  const totalPages = Math.ceil(totalLeads / itemsPerPage);
+  const indexOfLastLead = currentPage * itemsPerPage;
+  const indexOfFirstLead = indexOfLastLead - itemsPerPage;
+  const currentLeads = filteredLeads.slice(indexOfFirstLead, indexOfLastLead);
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
@@ -122,7 +134,7 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, isLoading, setLeads, initi
                 <td colSpan={6} className="p-8 text-center text-slate-500">No leads found matching your criteria.</td>
               </tr>
             ) : (
-              filteredLeads.map((lead) => (
+              currentLeads.map((lead) => (
                 <tr 
                   key={lead.id} 
                   className="hover:bg-slate-50 transition cursor-pointer"
@@ -183,6 +195,67 @@ const LeadsList: React.FC<LeadsListProps> = ({ leads, isLoading, setLeads, initi
           </tbody>
         </table>
       </div>
+
+      {/* Pagination Footer */}
+      {totalPages > 1 && (
+        <div className="p-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 bg-slate-50">
+          <p className="text-sm text-slate-500 font-medium">
+            Showing <span className="font-bold text-slate-700">{totalLeads === 0 ? 0 : indexOfFirstLead + 1}</span> to{' '}
+            <span className="font-bold text-slate-700">
+              {Math.min(indexOfLastLead, totalLeads)}
+            </span>{' '}
+            of <span className="font-bold text-slate-700">{totalLeads}</span> leads
+          </p>
+          <div className="flex items-center gap-1">
+            {/* Previous Page */}
+            <button
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className={`p-2 border rounded-xl transition ${
+                currentPage === 1
+                  ? 'border-slate-200 bg-slate-100 text-slate-300 cursor-not-allowed'
+                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+              }`}
+              title="Previous Page"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+
+            {/* Page Buttons */}
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map(pageNum => (
+              <button
+                key={pageNum}
+                onClick={() => setCurrentPage(pageNum)}
+                className={`w-9 h-9 flex items-center justify-center border text-sm font-bold rounded-xl transition ${
+                  currentPage === pageNum
+                    ? 'border-primary bg-primary text-white shadow-md shadow-primary/10'
+                    : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+                }`}
+              >
+                {pageNum}
+              </button>
+            ))}
+
+            {/* Next Page */}
+            <button
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className={`p-2 border rounded-xl transition ${
+                currentPage === totalPages
+                  ? 'border-slate-200 bg-slate-100 text-slate-300 cursor-not-allowed'
+                  : 'border-slate-200 bg-white text-slate-600 hover:bg-slate-50 hover:text-slate-800'
+              }`}
+              title="Next Page"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
 
       {selectedLead && (
         <LeadDetailModal 
