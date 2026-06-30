@@ -310,13 +310,13 @@ app.post('/api/v1/simulate', async (req, res) => {
 
             const metadata = await sharp(patBuffer).metadata();
 
-            // Create a solid neon green mask layer
+            // Create a semi-transparent neon green mask layer (35% opacity)
             const highlightLayer = await sharp({
                 create: {
                     width: metadata.width!,
                     height: metadata.height!,
                     channels: 4,
-                    background: { r: 0, g: 255, b: 0, alpha: 1 } // Solid Neon Green
+                    background: { r: 0, g: 255, b: 0, alpha: 0.35 } // Semi-Transparent Neon Green
                 }
             }).png().toBuffer();
 
@@ -341,7 +341,7 @@ app.post('/api/v1/simulate', async (req, res) => {
 TASK: Perform a photorealistic, high-fidelity surgical hair transplant simulation.
 
 INSTRUCTIONS:
-1. RECIPIENT ZONE TARGET (CRITICAL): The solid neon green mask marks the EXACT recipient zone where the transplant is planned. You must completely replace the ENTIRE green mask area with new, naturally growing hair. Do NOT leave a single green pixel exposed. Every pixel that is currently green MUST be replaced by hair or realistic scalp shading.
+1. RECIPIENT ZONE TARGET (CRITICAL): The semi-transparent neon green highlight marks the EXACT recipient zone where the transplant is planned. You must draw new, naturally growing hair over this entire green area. Do NOT leave any green highlight visible. Every highlighted pixel must be replaced/covered by realistic, natural-looking hair.
 2. HAIR COLOR & HIGHLIGHT MATCHING (CRITICAL):
    - The color of the generated hair MUST EXACTLY match the patient's native hair color.
    - Distinguish between natural light reflections (gloss/sheen from overhead lights) and actual gray/white hair. The patient has dark/black hair; do NOT generate gray, white, or silver hair strands unless the patient's hair is already predominantly gray. Keep the hair solid black/dark.
@@ -358,8 +358,8 @@ INSTRUCTIONS:
    - Feather and taper the new hair flawlessly into the patient's surrounding native hair so there is no visible seam or transition boundary.
 
 CRITICAL CONSTRAINTS:
-- NO BALDNESS REMAINING: For HIGH density, you must completely cover all bald or thinning spots within the green mask. It is a failure if the area looks balding or thin after the simulation.
-- NO GREEN ALLOWED: Every neon green pixel must be completely replaced by realistic hair or scalp shading. No green tint or halo may remain.
+- NO REDUCTION OF DENSITY / NO BALDNESS CREATION: Under no circumstances should you make the patient look balder than they are. If the patient has existing native hair inside the highlighted area, you must only ADD more hair to make it look thicker and fuller. Do NOT erase existing hair or create empty/bald patches.
+- NO GREEN ALLOWED: Every green highlighted pixel must be completely replaced by realistic hair. No green tint, outline, or halo may remain.
 - The final output must be a seamless, high-resolution, photorealistic clinical simulation.`;
 
         const response = await ai.models.generateContent({
@@ -367,7 +367,7 @@ CRITICAL CONSTRAINTS:
             contents: [
                 {
                     parts: [
-                        { text: "Here is the input image showing the patient with a green mask overlay marking the target recipient zone where you must draw the new hair:" },
+                        { text: "Here is the input image showing the patient with a semi-transparent green mask overlay marking the target recipient zone where you must draw the new hair:" },
                         {
                             inlineData: {
                                 data: inputImageBase64,
@@ -403,14 +403,26 @@ CRITICAL CONSTRAINTS:
         }
 
         // --- 4. AI QUALITY CONTROL (QA) CHECK BEFORE COMPOSITION ---
-        const qcPrompt = "Analyze this hair transplant simulation result. Answer ONLY 'PASS' if it looks like a person with new hair added. FATAL ERROR: answer ONLY 'FAIL' if ANY of these are true: 1) There is a visible green tint, green pixels, or green patch on the scalp (this means the AI failed to draw hair over the mask), 2) NO new hair was added (it still looks completely bald in the target area), 3) the new hair looks like a solid black block or a literal wig pasted on. You must reject obvious failures or unchanged bald heads with green patches.";
+        // We pass BOTH the original patient image and the simulated AI result image so Gemini can compare them side-by-side.
+        const qcPrompt = `Compare the Original Patient Photo with the AI Generated Simulation Result.
+Answer ONLY 'PASS' if the simulation successfully added hair or increased density, and look natural.
+Answer ONLY 'FAIL' if any of the following are true:
+1) The patient looks balder, has less hair, or has a new bald spot in the simulation compared to their original photo (NO REVERSE RESULTS: the output must have more or equal hair density, never less).
+2) There is any visible green tint or green pixels remaining.
+3) No new hair was generated in the target area.
+4) The generated hair looks completely fake (like a solid black block, cartoon lines, or a literal wig pasted on).
+
+Decision (PASS/FAIL):`;
         
         const qcResult = await ai.models.generateContent({
             model: MODEL_NAME,
             contents: [{
                 parts: [
-                    { text: qcPrompt },
-                    { inlineData: { data: aiResultB64, mimeType: aiMime } }
+                    { text: "Original Patient Photo:" },
+                    { inlineData: { data: patientBase64, mimeType: patientMime } },
+                    { text: "AI Generated Simulation Result:" },
+                    { inlineData: { data: aiResultB64, mimeType: aiMime } },
+                    { text: qcPrompt }
                 ]
             }],
             config: {
