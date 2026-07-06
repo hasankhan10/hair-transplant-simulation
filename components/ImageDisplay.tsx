@@ -18,6 +18,75 @@ interface ImageDisplayProps {
   density?: string;
 }
 
+// Helper to dynamically style notifications based on message content
+const getNotificationStyle = (msg: string) => {
+  const text = msg.toLowerCase();
+  
+  // 1. Success message (green)
+  if (
+    text.includes('success') || 
+    text.includes('verified') || 
+    text.includes('complete') || 
+    text.includes('saved') || 
+    text.includes('uploaded')
+  ) {
+    return {
+      bgClass: 'bg-emerald-50 border border-emerald-200 text-emerald-800',
+      icon: (
+        <svg className="w-5 h-5 mr-3 text-emerald-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      )
+    };
+  }
+  
+  // 2. Soft Warning message / QA feedback (amber/yellow)
+  if (
+    text.includes('unnatural') || 
+    text.includes('unnatural result') || 
+    text.includes('please click') || 
+    text.includes('try again') || 
+    text.includes('density') || 
+    text.includes('balder') ||
+    text.includes('no new hair')
+  ) {
+    return {
+      bgClass: 'bg-amber-50 border border-amber-200 text-amber-800',
+      icon: (
+        <svg className="w-5 h-5 mr-3 text-amber-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+      )
+    };
+  }
+
+  // 3. Info message (blue)
+  if (
+    text.includes('info') ||
+    text.includes('notice') ||
+    text.includes('checking')
+  ) {
+    return {
+      bgClass: 'bg-sky-50 border border-sky-200 text-sky-800',
+      icon: (
+        <svg className="w-5 h-5 mr-3 text-sky-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      )
+    };
+  }
+  
+  // 4. Default / Hard Error (red)
+  return {
+    bgClass: 'bg-red-50 border border-red-200 text-red-800',
+    icon: (
+      <svg className="w-5 h-5 mr-3 text-red-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+    )
+  };
+};
+
 const ImageDisplay: React.FC<ImageDisplayProps> = ({
   beforeImage,
   result,
@@ -33,6 +102,8 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'comparison' | 'result' | 'original'>('comparison');
   const [isDownloading, setIsDownloading] = useState(false);
+
+  const notification = error ? getNotificationStyle(error) : null;
 
   const generateCollageDataUrl = async (): Promise<string | null> => {
     if (!beforeImage || !result) return null;
@@ -202,11 +273,9 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
   if (!beforeImage && !isProcessing && !result) {
     return (
       <section className="bg-white rounded-2xl clinical-shadow border border-slate-100 flex flex-col items-center justify-center p-12 min-h-[600px] text-center relative" aria-labelledby="start-sim-title">
-        {error && (
-          <div className="absolute top-4 left-4 right-4 z-20 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center animate-in fade-in slide-in-from-top-2">
-            <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
+        {error && notification && (
+          <div className={`absolute top-4 left-4 right-4 z-20 px-4 py-3 rounded-lg flex items-center animate-in fade-in slide-in-from-top-2 shadow-md ${notification.bgClass}`}>
+            {notification.icon}
             <span className="text-base font-medium">{error}</span>
           </div>
         )}
@@ -274,11 +343,9 @@ const ImageDisplay: React.FC<ImageDisplayProps> = ({
       </div>
 
       <div className="flex-grow p-6 relative bg-slate-100 flex items-center justify-center">
-        {error && (
-          <div className="absolute top-4 left-4 right-4 z-20 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg flex items-center animate-in fade-in slide-in-from-top-2">
-            <svg className="w-5 h-5 mr-3" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
-            </svg>
+        {error && notification && (
+          <div className={`absolute top-4 left-4 right-4 z-20 px-4 py-3 rounded-lg flex items-center animate-in fade-in slide-in-from-top-2 shadow-md ${notification.bgClass}`}>
+            {notification.icon}
             <span className="text-base font-medium">{error}</span>
           </div>
         )}

@@ -26,7 +26,7 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 
-const MODEL_NAME = 'gemini-2.5-flash-image';
+const MODEL_NAME = 'gemini-3.1-flash-image';
 
 /**
  * Strips the data:image prefix to get just the base64 data
@@ -310,13 +310,13 @@ app.post('/api/v1/simulate', async (req, res) => {
 
             const metadata = await sharp(patBuffer).metadata();
 
-            // Create a semi-transparent neon green mask layer (35% opacity)
+            // Create a semi-transparent neon green mask layer (45% opacity)
             const highlightLayer = await sharp({
                 create: {
                     width: metadata.width!,
                     height: metadata.height!,
                     channels: 4,
-                    background: { r: 0, g: 255, b: 0, alpha: 0.35 } // Semi-Transparent Neon Green
+                    background: { r: 0, g: 255, b: 0, alpha: 0.45 } // Semi-Transparent Neon Green (45% Opacity)
                 }
             }).png().toBuffer();
 
@@ -405,15 +405,24 @@ CRITICAL CONSTRAINTS:
         // --- 4. AI QUALITY CONTROL (QA) CHECK BEFORE COMPOSITION ---
         // We pass BOTH the original patient image and the simulated AI result image so Gemini can compare them side-by-side.
         const qcPrompt = `Compare the Original Patient Photo with the AI Generated Simulation Result.
-Answer ONLY 'PASS' if the simulation successfully added hair or increased density, and look natural.
-Answer ONLY 'FAIL' if any of the following are true:
-1) The patient looks balder, has less hair, or has a new bald spot in the simulation compared to their original photo (NO REVERSE RESULTS: the output must have more or equal hair density, never less).
-2) There is any visible green tint or green pixels remaining.
-3) No new hair was generated in the target area.
+Determine the decision ("PASS" or "FAIL") based on the following rules:
+
+Answer "FAIL" if any of the following are true:
+1) The patient looks balder, has less hair, or has a new bald spot in the simulation compared to their original photo (the output must have more or equal hair density, never less).
+2) There is any visible green tint, green highlight, or green pixels remaining on the scalp.
+3) No new hair was generated in the target area (meaning the output is completely identical or unchanged compared to the original photo). Note: if the patient already has hair, look closely to see if it has been filled in, made thicker, or has increased density. Do not fail if the hair was successfully made thicker/denser.
 4) The generated hair looks completely fake (like a solid black block, cartoon lines, or a literal wig pasted on).
 
-Decision (PASS/FAIL):`;
+Otherwise, answer "PASS" if the simulation successfully added hair or increased density, and looks natural.
+
+You MUST respond ONLY with a raw JSON object containing these two fields:
+{
+  "decision": "PASS" or "FAIL",
+  "reason": "a detailed explanation of the decision"
+}
+Do not output any markdown code blocks, backticks, or other text outside the JSON.`;
         
+        console.log("[QA CHECK] Running comparison QA check...");
         const qcResult = await ai.models.generateContent({
             model: MODEL_NAME,
             contents: [{
@@ -431,17 +440,48 @@ Decision (PASS/FAIL):`;
             }
         });
 
-        let qcText = "";
-        if (qcResult.candidates?.[0]?.content?.parts) {
-            for (const part of qcResult.candidates[0].content.parts) {
-                if ('text' in part) qcText += part.text;
+        let qcDecision = "FAIL";
+        let qcReason = "No response from QA model";
+
+        try {
+            let qcText = "";
+            if (qcResult.candidates?.[0]?.content?.parts) {
+                for (const part of qcResult.candidates[0].content.parts) {
+                    if ('text' in part) qcText += part.text;
+                }
+            }
+            console.log("[QA CHECK] Raw Response:", qcText);
+            
+            // Clean up any markdown code blocks (e.g. ```json ... ```)
+            let cleanedText = qcText.trim();
+            if (cleanedText.startsWith("```")) {
+                cleanedText = cleanedText.replace(/^```[a-zA-Z]*\n?/, "").replace(/\n?```$/, "").trim();
+            }
+            
+            const parsed = JSON.parse(cleanedText);
+            qcDecision = parsed.decision?.toUpperCase() || "FAIL";
+            qcReason = parsed.reason || "No reason provided";
+            console.log(`[QA CHECK] Decision: ${qcDecision}, Reason: ${qcReason}`);
+        } catch (e: any) {
+            console.error("[QA CHECK] Failed to parse JSON response:", e);
+            // Fallback: If it's not valid JSON, check for PASS/FAIL text directly in the raw output
+            const upperText = qcResult.candidates?.[0]?.content?.parts?.[0] && 'text' in qcResult.candidates[0].content.parts[0]
+                ? String(qcResult.candidates[0].content.parts[0].text).toUpperCase()
+                : "";
+            if (upperText.includes("PASS") && !upperText.includes("FAIL")) {
+                qcDecision = "PASS";
+                qcReason = "Fallback parser detected PASS";
+            } else {
+                qcDecision = "FAIL";
+                qcReason = "Fallback parser: AI response was not valid JSON";
             }
         }
 
-        if (qcText.toUpperCase().includes("FAIL")) {
+        if (qcDecision === "FAIL") {
+            console.warn(`[QA CHECK] Rejected generation. Reason: ${qcReason}`);
             return res.status(400).json({ 
                 success: false, 
-                error: "The AI generated an unnatural result. Please click Generate Simulation again for a better outcome." 
+                error: `The AI generated an unnatural result. Please click Generate Simulation again for a better outcome. (Reason: ${qcReason})`
             });
         }
 
