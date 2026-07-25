@@ -26,7 +26,56 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 
-const MODEL_NAME = 'gemini-3.1-flash-image';
+const MODEL_FALLBACK_CHAIN = [
+    'gemini-3.1-flash-image',
+    'gemini-3-pro-image',
+    'gemini-2.5-flash-image'
+];
+const MODEL_NAME = MODEL_FALLBACK_CHAIN[0];
+
+/**
+ * Sanitizes internal server / Gemini API errors into warm, reassuring clinical messages.
+ * Ensures raw JSON, stack traces, and 500 status strings are NEVER exposed to the client.
+ */
+function sanitizeErrorMessage(error: any): string {
+    const rawMessage = typeof error === 'string' ? error : (error?.message || String(error));
+    console.error("[SERVER INTERNAL ERROR LOG]:", rawMessage);
+
+    let lower = rawMessage.toLowerCase();
+
+    // Handle stringified JSON errors (e.g. {"error":{"code":500...}})
+    if (rawMessage.trim().startsWith('{')) {
+        try {
+            const parsed = JSON.parse(rawMessage);
+            const nested = parsed.error?.message || parsed.message || parsed.error;
+            if (typeof nested === 'string') lower = nested.toLowerCase();
+        } catch (e) {
+            // Keep original lower string
+        }
+    }
+
+    if (
+        lower.includes('high demand') ||
+        lower.includes('internal error') ||
+        lower.includes('code":500') ||
+        lower.includes('500') ||
+        lower.includes('503') ||
+        lower.includes('429') ||
+        lower.includes('rate limit') ||
+        lower.includes('overloaded') ||
+        lower.includes('timeout') ||
+        lower.includes('unavailable') ||
+        lower.includes('resource_exhausted')
+    ) {
+        return "Our AI simulation engine is currently experiencing high demand. Please click 'Generate Simulation' again in a moment for your high-density preview.";
+    }
+
+    if (lower.includes('scalp') || lower.includes('photo') || lower.includes('clear')) {
+        return "Please upload a clear photo of your scalp/head for simulation, not any other type of image.";
+    }
+
+    return "Our AI processor is temporarily busy. Please click 'Generate Simulation' again for a better outcome.";
+}
 
 /**
  * Strips the data:image prefix to get just the base64 data
@@ -262,7 +311,7 @@ app.post('/api/v1/simulate', async (req, res) => {
     try {
         const { patientImage, mask, density, apiKey: providedKey } = req.body;
 
-        // Use server-side API key if available, otherwise use from request (for multi-tenant support if needed)
+        // Use server-side API key if available, otherwise use from request
         const apiKey = process.env.GEMINI_API_KEY || providedKey;
 
         if (!apiKey) {
@@ -272,26 +321,35 @@ app.post('/api/v1/simulate', async (req, res) => {
         const ai = new GoogleGenAI({ apiKey });
         const { data: patientBase64, mimeType: patientMime } = getBase64Data(patientImage);
 
-        // --- 1. ANATOMICAL VALIDATION (Redundant check for API security) ---
+        // --- 1. ANATOMICAL VALIDATION ---
         const validationPrompt = "Analyze this image. Is it a human scalp, human hair, or a human head/face suitable for a hair transplant simulation? Answer ONLY with 'TRUE' if it is, or 'FALSE' if it is anything else (animals, landscapes, objects, etc).";
-        const validationResult = await ai.models.generateContent({
-            model: MODEL_NAME,
-            contents: [{
-                parts: [
-                    { text: validationPrompt },
-                    { inlineData: { data: patientBase64, mimeType: patientMime } }
-                ]
-            }]
-        });
+        let isValidScalp = true;
+        try {
+            const validationResult = await ai.models.generateContent({
+                model: MODEL_FALLBACK_CHAIN[0],
+                contents: [{
+                    parts: [
+                        { text: validationPrompt },
+                        { inlineData: { data: patientBase64, mimeType: patientMime } }
+                    ]
+                }]
+            });
 
-        let validationText = "";
-        if (validationResult.candidates?.[0]?.content?.parts) {
-            for (const part of validationResult.candidates[0].content.parts) {
-                if ('text' in part) validationText += part.text;
+            let validationText = "";
+            if (validationResult.candidates?.[0]?.content?.parts) {
+                for (const part of validationResult.candidates[0].content.parts) {
+                    if ('text' in part) validationText += part.text;
+                }
             }
+
+            if (validationText.toUpperCase().includes("FALSE")) {
+                isValidScalp = false;
+            }
+        } catch (e) {
+            console.warn("[VALIDATION WARNING] Primary model validation skipped due to API load, proceeding to simulation fallback chain.");
         }
 
-        if (validationText.toUpperCase().includes("FALSE")) {
+        if (!isValidScalp) {
             return res.status(400).json({
                 success: false,
                 error: "Please upload a clear photo of your scalp/head for simulation, not any other type of image."
@@ -299,7 +357,6 @@ app.post('/api/v1/simulate', async (req, res) => {
         }
 
         // --- 2. PREPARE AI INPUT (Adding the Highlight Mask) ---
-        // We use a semi-transparent yellow highlight so the AI can still see the scalp texture underneath!
         let inputImageBase64 = patientBase64;
         let inputMime = patientMime;
 
@@ -310,22 +367,19 @@ app.post('/api/v1/simulate', async (req, res) => {
 
             const metadata = await sharp(patBuffer).metadata();
 
-            // Create a semi-transparent neon green mask layer (45% opacity)
             const highlightLayer = await sharp({
                 create: {
                     width: metadata.width!,
                     height: metadata.height!,
                     channels: 4,
-                    background: { r: 0, g: 255, b: 0, alpha: 0.45 } // Semi-Transparent Neon Green (45% Opacity)
+                    background: { r: 0, g: 255, b: 0, alpha: 0.45 }
                 }
             }).png().toBuffer();
 
-            // Mask the highlight layer with the user's mask
             const greenMask = await sharp(highlightLayer)
                 .composite([{ input: maskBuffer, blend: 'dest-in' }])
                 .toBuffer();
 
-            // Composite onto patient image
             const aiInputBuffer = await sharp(patBuffer)
                 .composite([{ input: greenMask, top: 0, left: 0 }])
                 .toBuffer();
@@ -334,7 +388,7 @@ app.post('/api/v1/simulate', async (req, res) => {
             inputMime = 'image/png';
         }
 
-        // --- 3. RUN SIMULATION ---
+        // --- 3. RUN SIMULATION WITH MULTI-MODEL FALLBACK CHAIN ---
         const densityLabel = (density ? String(density).split(' ')[0] : "MEDIUM").toUpperCase();
 
         const systemPrompt = `ROLE: EXPERT CLINICAL HAIR RESTORATION AI
@@ -362,48 +416,6 @@ CRITICAL CONSTRAINTS:
 - NO GREEN ALLOWED: Every green highlighted pixel must be completely replaced by realistic hair. No green tint, outline, or halo may remain.
 - The final output must be a seamless, high-resolution, photorealistic clinical simulation.`;
 
-        const response = await ai.models.generateContent({
-            model: MODEL_NAME,
-            contents: [
-                {
-                    parts: [
-                        { text: "Here is the input image showing the patient with a semi-transparent green mask overlay marking the target recipient zone where you must draw the new hair:" },
-                        {
-                            inlineData: {
-                                data: inputImageBase64,
-                                mimeType: inputMime
-                            }
-                        }
-                    ]
-                }
-            ],
-            config: {
-                systemInstruction: {
-                    parts: [{ text: systemPrompt }]
-                },
-                temperature: 0.2,
-                topP: 0.85
-            }
-        });
-
-        let aiResultB64 = "";
-        let aiMime = "";
-        if (response.candidates?.[0]?.content?.parts) {
-            for (const part of response.candidates[0].content.parts) {
-                if (part.inlineData) {
-                    aiResultB64 = part.inlineData.data;
-                    aiMime = part.inlineData.mimeType;
-                    break;
-                }
-            }
-        }
-
-        if (!aiResultB64) {
-            return res.status(500).json({ success: false, error: "AI failed to generate results" });
-        }
-
-        // --- 4. AI QUALITY CONTROL (QA) CHECK BEFORE COMPOSITION ---
-        // We pass BOTH the original patient image and the simulated AI result image so Gemini can compare them side-by-side.
         const qcPrompt = `Compare the Original Patient Photo with the AI Generated Simulation Result.
 Determine the decision ("PASS" or "FAIL") based on the following rules:
 
@@ -421,90 +433,153 @@ You MUST respond ONLY with a raw JSON object containing these two fields:
   "reason": "a detailed explanation of the decision"
 }
 Do not output any markdown code blocks, backticks, or other text outside the JSON.`;
-        
-        console.log("[QA CHECK] Running comparison QA check...");
-        const qcResult = await ai.models.generateContent({
-            model: MODEL_NAME,
-            contents: [{
-                parts: [
-                    { text: "Original Patient Photo:" },
-                    { inlineData: { data: patientBase64, mimeType: patientMime } },
-                    { text: "AI Generated Simulation Result:" },
-                    { inlineData: { data: aiResultB64, mimeType: aiMime } },
-                    { text: qcPrompt }
-                ]
-            }],
-            config: {
-                temperature: 0.1,
-                topP: 0.9
-            }
-        });
 
-        let qcDecision = "FAIL";
-        let qcReason = "No response from QA model";
+        let finalAiResultB64 = "";
+        let finalAiMime = "";
+        let lastModelError: any = null;
 
-        try {
-            let qcText = "";
-            if (qcResult.candidates?.[0]?.content?.parts) {
-                for (const part of qcResult.candidates[0].content.parts) {
-                    if ('text' in part) qcText += part.text;
+        for (const currentModel of MODEL_FALLBACK_CHAIN) {
+            console.log(`[SIMULATION ENGINE] Attempting simulation with model: ${currentModel}`);
+            try {
+                const response = await ai.models.generateContent({
+                    model: currentModel,
+                    contents: [
+                        {
+                            parts: [
+                                { text: "Here is the input image showing the patient with a semi-transparent green mask overlay marking the target recipient zone where you must draw the new hair:" },
+                                {
+                                    inlineData: {
+                                        data: inputImageBase64,
+                                        mimeType: inputMime
+                                    }
+                                }
+                            ]
+                        }
+                    ],
+                    config: {
+                        systemInstruction: {
+                            parts: [{ text: systemPrompt }]
+                        },
+                        temperature: 0.2,
+                        topP: 0.85
+                    }
+                });
+
+                let aiResultB64 = "";
+                let aiMime = "";
+                if (response.candidates?.[0]?.content?.parts) {
+                    for (const part of response.candidates[0].content.parts) {
+                        if (part.inlineData) {
+                            aiResultB64 = part.inlineData.data;
+                            aiMime = part.inlineData.mimeType;
+                            break;
+                        }
+                    }
                 }
-            }
-            console.log("[QA CHECK] Raw Response:", qcText);
-            
-            // Clean up any markdown code blocks (e.g. ```json ... ```)
-            let cleanedText = qcText.trim();
-            if (cleanedText.startsWith("```")) {
-                cleanedText = cleanedText.replace(/^```[a-zA-Z]*\n?/, "").replace(/\n?```$/, "").trim();
-            }
-            
-            const parsed = JSON.parse(cleanedText);
-            qcDecision = parsed.decision?.toUpperCase() || "FAIL";
-            qcReason = parsed.reason || "No reason provided";
-            console.log(`[QA CHECK] Decision: ${qcDecision}, Reason: ${qcReason}`);
-        } catch (e: any) {
-            console.error("[QA CHECK] Failed to parse JSON response:", e);
-            // Fallback: If it's not valid JSON, check for PASS/FAIL text directly in the raw output
-            const upperText = qcResult.candidates?.[0]?.content?.parts?.[0] && 'text' in qcResult.candidates[0].content.parts[0]
-                ? String(qcResult.candidates[0].content.parts[0].text).toUpperCase()
-                : "";
-            if (upperText.includes("PASS") && !upperText.includes("FAIL")) {
-                qcDecision = "PASS";
-                qcReason = "Fallback parser detected PASS";
-            } else {
-                qcDecision = "FAIL";
-                qcReason = "Fallback parser: AI response was not valid JSON";
+
+                if (!aiResultB64) {
+                    console.warn(`[FALLBACK ENGINE] Model ${currentModel} returned empty image data. Retrying with next model...`);
+                    continue;
+                }
+
+                // --- QA CHECK FOR CURRENT MODEL ---
+                console.log(`[QA CHECK] Running comparison QA check with model: ${currentModel}...`);
+                const qcResult = await ai.models.generateContent({
+                    model: currentModel,
+                    contents: [{
+                        parts: [
+                            { text: "Original Patient Photo:" },
+                            { inlineData: { data: patientBase64, mimeType: patientMime } },
+                            { text: "AI Generated Simulation Result:" },
+                            { inlineData: { data: aiResultB64, mimeType: aiMime } },
+                            { text: qcPrompt }
+                        ]
+                    }],
+                    config: {
+                        temperature: 0.1,
+                        topP: 0.9
+                    }
+                });
+
+                let qcDecision = "FAIL";
+                let qcReason = "No response from QA model";
+
+                try {
+                    let qcText = "";
+                    if (qcResult.candidates?.[0]?.content?.parts) {
+                        for (const part of qcResult.candidates[0].content.parts) {
+                            if ('text' in part) qcText += part.text;
+                        }
+                    }
+                    
+                    let cleanedText = qcText.trim();
+                    if (cleanedText.startsWith("```")) {
+                        cleanedText = cleanedText.replace(/^```[a-zA-Z]*\n?/, "").replace(/\n?```$/, "").trim();
+                    }
+                    
+                    const parsed = JSON.parse(cleanedText);
+                    qcDecision = parsed.decision?.toUpperCase() || "FAIL";
+                    qcReason = parsed.reason || "No reason provided";
+                    console.log(`[QA CHECK] Decision: ${qcDecision}, Reason: ${qcReason}`);
+                } catch (e: any) {
+                    console.error("[QA CHECK] Failed to parse JSON response:", e);
+                    const upperText = qcResult.candidates?.[0]?.content?.parts?.[0] && 'text' in qcResult.candidates[0].content.parts[0]
+                        ? String(qcResult.candidates[0].content.parts[0].text).toUpperCase()
+                        : "";
+                    if (upperText.includes("PASS") && !upperText.includes("FAIL")) {
+                        qcDecision = "PASS";
+                        qcReason = "Fallback parser detected PASS";
+                    } else {
+                        qcDecision = "FAIL";
+                        qcReason = "Fallback parser: AI response was not valid JSON";
+                    }
+                }
+
+                if (qcDecision === "PASS") {
+                    console.log(`[SIMULATION ENGINE] Successful generation and QA PASS using model: ${currentModel}`);
+                    finalAiResultB64 = aiResultB64;
+                    finalAiMime = aiMime;
+                    break;
+                } else {
+                    console.warn(`[FALLBACK ENGINE] QA rejected model ${currentModel} (Reason: ${qcReason}). Trying next model in fallback chain...`);
+                    if (!finalAiResultB64) {
+                        finalAiResultB64 = aiResultB64;
+                        finalAiMime = aiMime;
+                    }
+                }
+
+            } catch (modelErr: any) {
+                console.error(`[FALLBACK ENGINE] Model ${currentModel} encountered error:`, modelErr?.message || modelErr);
+                lastModelError = modelErr;
             }
         }
 
-        if (qcDecision === "FAIL") {
-            console.warn(`[QA CHECK] Rejected generation. Reason: ${qcReason}`);
-            return res.status(400).json({ 
-                success: false, 
-                error: `The AI generated an unnatural result. Please click Generate Simulation again for a better outcome. (Reason: ${qcReason})`
-            });
+        if (!finalAiResultB64) {
+            const sanitizedMsg = sanitizeErrorMessage(lastModelError || "All simulation models are currently busy.");
+            return res.status(500).json({ success: false, error: sanitizedMsg });
         }
 
         // --- 5. FINAL COMPOSITION ---
-        let finalImageBase64 = aiResultB64;
+        let finalImageBase64 = finalAiResultB64;
         if (mask) {
             const finalBuffer = await compositeStrictResultServer(
                 Buffer.from(patientBase64, 'base64'),
-                Buffer.from(aiResultB64, 'base64'),
+                Buffer.from(finalAiResultB64, 'base64'),
                 Buffer.from(getBase64Data(mask).data, 'base64')
             );
             finalImageBase64 = finalBuffer.toString('base64');
-            aiMime = 'image/png';
+            finalAiMime = 'image/png';
         }
 
         res.json({
             success: true,
-            resultImage: `data:${aiMime};base64,${finalImageBase64}`
+            resultImage: `data:${finalAiMime};base64,${finalImageBase64}`
         });
 
     } catch (error: any) {
-        console.error("API Error:", error);
-        res.status(500).json({ success: false, error: error.message });
+        console.error("API Global Error:", error);
+        const sanitizedMsg = sanitizeErrorMessage(error);
+        res.status(500).json({ success: false, error: sanitizedMsg });
     }
 });
 

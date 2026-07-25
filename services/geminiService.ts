@@ -198,6 +198,43 @@ export const validateScalpImage = async (patientImage: string): Promise<{ succes
 };
 
 /**
+ * Sanitizes errors on the client to ensure raw JSON strings or 500 error objects are never displayed to end users.
+ */
+const sanitizeClientError = (errMessage: string): string => {
+    if (!errMessage) return "Our AI simulation engine is currently experiencing high demand. Please click 'Generate Simulation' again in a moment for your high-density preview.";
+    
+    const trimmed = String(errMessage).trim();
+    if (trimmed.startsWith('{')) {
+        try {
+            const parsed = JSON.parse(trimmed);
+            const nested = parsed.error?.message || parsed.message || parsed.error;
+            if (typeof nested === 'string') {
+                return sanitizeClientError(nested);
+            }
+        } catch (e) {
+            // Keep original string
+        }
+        return "Our AI simulation engine is currently experiencing high demand. Please click 'Generate Simulation' again in a moment for your high-density preview.";
+    }
+
+    const lower = errMessage.toLowerCase();
+    if (
+        lower.includes('internal error') ||
+        lower.includes('code":500') ||
+        lower.includes('status":500') ||
+        lower.includes('high demand') ||
+        lower.includes('rate limit') ||
+        lower.includes('503') ||
+        lower.includes('overloaded') ||
+        lower.includes('500')
+    ) {
+        return "Our AI simulation engine is currently experiencing high demand. Please click 'Generate Simulation' again in a moment for your high-density preview.";
+    }
+
+    return errMessage;
+};
+
+/**
  * Generates a medical hair visualization by calling the Backend API
  */
 export const generateHairVisualization = async (
@@ -220,12 +257,12 @@ export const generateHairVisualization = async (
         const data = await response.json();
 
         if (!data.success) {
-            throw new Error(data.error || "Failed to generate simulation");
+            throw new Error(sanitizeClientError(data.error));
         }
 
         return data.resultImage;
     } catch (error: any) {
         console.error("Simulation failed:", error);
-        throw error;
+        throw new Error(sanitizeClientError(error?.message || String(error)));
     }
 };

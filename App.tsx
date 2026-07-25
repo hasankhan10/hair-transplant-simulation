@@ -138,20 +138,34 @@ const App: React.FC = () => {
     setProcessingProgress(0);
     setProcessingStatus('Analyzing Scalp & Hair Pattern...');
 
+    let loopCount = 0;
 
-
-    // Simulated progress updates for a more professional feel
+    // Simulated progress updates with auto-restart on fallback attempt
     const progressInterval = setInterval(() => {
       setProcessingProgress(prev => {
-        if (prev >= 95) return prev;
+        // If progress reaches 92% while waiting (e.g. model fallback in progress), restart cycle smoothly
+        if (prev >= 92) {
+          loopCount++;
+          setProcessingStatus('Optimizing AI Engine Channel & Re-analyzing Scalp...');
+          return 15;
+        }
 
-        // Update status based on progress (Using professional clinical terminology)
-        if (prev > 75) setProcessingStatus('Finalizing Aesthetic Reconstruction...');
-        else if (prev > 55) setProcessingStatus('Simulating Optimal Graft Density...');
-        else if (prev > 30) setProcessingStatus('Performing Medical-Grade Follicular Alignment...');
-        else if (prev > 10) setProcessingStatus('Analyzing Scalp Architecture...');
+        const next = prev + Math.random() * 5;
 
-        return prev + Math.random() * 5;
+        // Update status based on progress and fallback loop count
+        if (loopCount > 0) {
+          if (next > 75) setProcessingStatus('Finalizing Secondary Reconstruction...');
+          else if (next > 55) setProcessingStatus('Simulating Enhanced Graft Density...');
+          else if (next > 30) setProcessingStatus('Aligning Alternate Follicular Pattern...');
+          else if (next > 15) setProcessingStatus('Optimizing AI Engine Channel & Re-analyzing Scalp...');
+        } else {
+          if (next > 75) setProcessingStatus('Finalizing Aesthetic Reconstruction...');
+          else if (next > 55) setProcessingStatus('Simulating Optimal Graft Density...');
+          else if (next > 30) setProcessingStatus('Performing Medical-Grade Follicular Alignment...');
+          else if (next > 10) setProcessingStatus('Analyzing Scalp Architecture...');
+        }
+
+        return next;
       });
     }, 400);
 
