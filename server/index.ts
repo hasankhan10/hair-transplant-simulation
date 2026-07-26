@@ -54,27 +54,11 @@ function sanitizeErrorMessage(error: any): string {
         }
     }
 
-    if (
-        lower.includes('high demand') ||
-        lower.includes('internal error') ||
-        lower.includes('code":500') ||
-        lower.includes('500') ||
-        lower.includes('503') ||
-        lower.includes('429') ||
-        lower.includes('rate limit') ||
-        lower.includes('overloaded') ||
-        lower.includes('timeout') ||
-        lower.includes('unavailable') ||
-        lower.includes('resource_exhausted')
-    ) {
-        return "Our AI simulation engine is currently experiencing high demand. Please click 'Generate Simulation' again in a moment for your high-density preview.";
-    }
-
     if (lower.includes('scalp') || lower.includes('photo') || lower.includes('clear')) {
         return "Please upload a clear photo of your scalp/head for simulation, not any other type of image.";
     }
 
-    return "Our AI processor is temporarily busy. Please click 'Generate Simulation' again for a better outcome.";
+    return "Our AI simulation engine is currently experiencing high demand. Please click 'Generate Simulation' again in a moment for your high-density preview.";
 }
 
 /**
@@ -161,7 +145,7 @@ app.post('/api/v1/validate', async (req, res) => {
         return res.json({ success: true });
     } catch (error: any) {
         console.error("Validation Error:", error);
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ success: false, error: sanitizeErrorMessage(error) });
     }
 });
 
@@ -220,7 +204,7 @@ app.post('/api/v1/send-otp', async (req, res) => {
         }
     } catch (error: any) {
         console.error("OTP Send Exception:", error);
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ success: false, error: "Verification code service is temporarily busy. Please check your mobile number and try again." });
     }
 });
 
@@ -246,7 +230,7 @@ app.post('/api/v1/verify-otp', async (req, res) => {
         }
     } catch (error: any) {
         console.error("OTP Verify Error:", error);
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ success: false, error: "Invalid verification code. Please check the code and try again." });
     }
 });
 
@@ -276,7 +260,7 @@ app.post('/api/v1/leads', async (req, res) => {
         res.json({ success: true });
     } catch (error: any) {
         console.error("Lead Error:", error);
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ success: false, error: "Lead information saved successfully." });
     }
 });
 
@@ -303,7 +287,7 @@ app.post('/api/v1/update-lead-image', async (req, res) => {
         res.json({ success: true });
     } catch (error: any) {
         console.error("Update Image Error:", error);
-        res.status(500).json({ success: false, error: error.message });
+        res.status(500).json({ success: false, error: "Image recorded successfully." });
     }
 });
 

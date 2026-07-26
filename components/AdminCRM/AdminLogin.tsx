@@ -18,7 +18,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
     const expectedPass = import.meta.env.VITE_ADMIN_PASS?.trim();
 
     if (!expectedUser || !expectedPass) {
-      setError('System Error: Admin credentials not configured in environment variables.');
+      setError('Admin access unavailable. Please contact system administrator.');
       return;
     }
 
@@ -26,7 +26,7 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin }) => {
       setError('');
       onLogin();
     } else {
-      setError('Invalid username or password');
+      setError('Incorrect username or password. Please try again.');
     }
   };
 

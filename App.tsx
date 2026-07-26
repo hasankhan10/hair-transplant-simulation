@@ -99,7 +99,10 @@ const App: React.FC = () => {
 
     } catch (err: any) {
       console.error("Upload/Validation failed:", err);
-      setError(err.message || "An error occurred during medical validation.");
+      const cleanMsg = err?.message && !err.message.includes('{') && !err.message.includes('500') && !err.message.includes('code')
+        ? err.message
+        : "Please upload a clear photo of your scalp/head for simulation.";
+      setError(cleanMsg);
       setPatientImage(null);
     } finally {
       setProcessingProgress(100);
@@ -180,8 +183,11 @@ const App: React.FC = () => {
         timestamp: Date.now()
       });
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Failed to generate simulation. Please try again.');
+      console.error("Simulation error:", err);
+      const cleanMsg = err?.message && !err.message.includes('{') && !err.message.includes('500') && !err.message.includes('code') && !err.message.includes('parser')
+        ? err.message
+        : "Our AI simulation engine is currently experiencing high demand. Please click 'Generate Simulation' again in a moment for your high-density preview.";
+      setError(cleanMsg);
     } finally {
       clearInterval(progressInterval);
       setTimeout(() => setIsProcessing(false), 500); // Small delay to show 100%

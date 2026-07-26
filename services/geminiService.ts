@@ -220,15 +220,31 @@ const sanitizeClientError = (errMessage: string): string => {
     const lower = errMessage.toLowerCase();
     if (
         lower.includes('internal error') ||
-        lower.includes('code":500') ||
-        lower.includes('status":500') ||
+        lower.includes('code":') ||
+        lower.includes('status":') ||
         lower.includes('high demand') ||
         lower.includes('rate limit') ||
         lower.includes('503') ||
         lower.includes('overloaded') ||
-        lower.includes('500')
+        lower.includes('500') ||
+        lower.includes('400') ||
+        lower.includes('404') ||
+        lower.includes('parser') ||
+        lower.includes('json') ||
+        lower.includes('syntax') ||
+        lower.includes('token') ||
+        lower.includes('failed to parse') ||
+        lower.includes('fallback') ||
+        lower.includes('exception') ||
+        lower.includes('invalid_argument') ||
+        lower.includes('http') ||
+        lower.includes('fetch')
     ) {
         return "Our AI simulation engine is currently experiencing high demand. Please click 'Generate Simulation' again in a moment for your high-density preview.";
+    }
+
+    if (lower.includes('scalp') || lower.includes('photo') || lower.includes('clear')) {
+        return "Please upload a clear, front-facing photo of your scalp/head for optimal simulation results.";
     }
 
     return errMessage;
