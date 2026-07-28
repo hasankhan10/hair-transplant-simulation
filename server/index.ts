@@ -476,8 +476,9 @@ app.post('/api/v1/simulate', async (req, res) => {
 Strict constraints:
 1. The restored hair must perfectly match the patient's native hair characteristics, including precise color matching, follicular angle, caliber, wave pattern, and natural light reflection.
 2. Ensure a seamless, natural transition and blending between the native hair and the newly generated hair. Avoid harsh lines or unnatural density gradients.
-3. The scalp texture and lighting must remain photorealistic. Avoid any artificial, blurred, or unnatural rendering.
-4. DO NOT alter the patient's facial features, skin tone, background, clothing, or any other anatomical characteristics. Only modify the targeted transparent recipient zone.`;
+3. The hair MUST look organically grown directly from the scalp follicles. Do NOT make the hair look pasted on, painted on, or like a detached wig sitting on top of the head. Ensure the hair roots integrate naturally into the scalp skin.
+4. The scalp texture and lighting must remain photorealistic. Avoid any artificial, blurred, or unnatural rendering.
+5. DO NOT alter the patient's facial features, skin tone, background, clothing, or any other anatomical characteristics. Only modify the targeted transparent recipient zone.`;
 
         const qcPrompt = `Compare Original Photo vs Simulation Result. Return ONLY raw JSON: {"decision":"PASS"|"FAIL"}
 FAIL if:
