@@ -4,8 +4,8 @@ import cors from 'cors';
 import dotenv from 'dotenv';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { GoogleGenAI } from "@google/genai";
 import sharp from 'sharp';
+import OpenAI from 'openai';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -26,12 +26,11 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 
-const MODEL_FALLBACK_CHAIN = [
-    'gemini-3.1-flash-image',
-    'gemini-3-pro-image',
-    'gemini-2.5-flash-image'
+const OPENAI_MODEL_FALLBACK_CHAIN = [
+    'gpt-image-1.5',
+    'gpt-image-2'
 ];
-const MODEL_NAME = MODEL_FALLBACK_CHAIN[0];
+const OPENAI_QC_MODEL = 'gpt-4o-mini';
 
 /**
  * Sanitizes internal server / Gemini API errors into warm, reassuring clinical messages.
@@ -101,39 +100,140 @@ async function compositeStrictResultServer(
         .toBuffer();
 }
 
+interface PaddingInfo {
+    top: number;
+    left: number;
+    bottom: number;
+    right: number;
+}
+
+/**
+ * Pads an image to make it square, keeping it centered.
+ */
+async function padToSquare(inputBuffer: Buffer): Promise<{
+    buffer: Buffer;
+    originalWidth: number;
+    originalHeight: number;
+    padding: PaddingInfo;
+}> {
+    const metadata = await sharp(inputBuffer).metadata();
+    const w = metadata.width!;
+    const h = metadata.height!;
+    const size = Math.max(w, h);
+
+    const left = Math.floor((size - w) / 2);
+    const top = Math.floor((size - h) / 2);
+    const right = size - w - left;
+    const bottom = size - h - top;
+
+    const squareBuffer = await sharp(inputBuffer)
+        .extend({
+            top,
+            left,
+            bottom,
+            right,
+            background: { r: 0, g: 0, b: 0, alpha: 1 }
+        })
+        .resize(1024, 1024)
+        .png()
+        .toBuffer();
+
+    return {
+        buffer: squareBuffer,
+        originalWidth: w,
+        originalHeight: h,
+        padding: { top, left, bottom, right }
+    };
+}
+
+/**
+ * Crops a square padded image back to its original aspect ratio.
+ */
+async function cropToOriginal(
+    squareBuffer: Buffer,
+    originalWidth: number,
+    originalHeight: number,
+    padding: PaddingInfo
+): Promise<Buffer> {
+    const size = Math.max(originalWidth, originalHeight);
+    const scale = size / 1024;
+    const cropLeft = Math.round(padding.left / scale);
+    const cropTop = Math.round(padding.top / scale);
+
+    return sharp(squareBuffer)
+        .resize(size, size)
+        .extract({
+            left: cropLeft,
+            top: cropTop,
+            width: originalWidth,
+            height: originalHeight
+        })
+        .png()
+        .toBuffer();
+}
+
+/**
+ * Converts a grayscale/red opaque mask (where painted region has alpha>0, unpainted has alpha=0)
+ * into an OpenAI-compatible mask (where painted region has alpha=0, unpainted has alpha=255).
+ * Pads it to square to match the padded patient photo.
+ */
+async function prepareOpenAiMask(
+    maskBuffer: Buffer,
+    originalWidth: number,
+    originalHeight: number,
+    padding: PaddingInfo
+): Promise<Buffer> {
+    // 1. Pad the user's mask to square matching the patient's aspect ratio extension
+    // 2. Negate the color and the alpha channel (so painted transparent becomes opaque, and painted opaque becomes transparent)
+    return sharp(maskBuffer)
+        .extend({
+            top: padding.top,
+            left: padding.left,
+            bottom: padding.bottom,
+            right: padding.right,
+            background: { r: 0, g: 0, b: 0, alpha: 0 } // pad with transparent
+        })
+        .resize(1024, 1024, { fit: 'fill' })
+        .ensureAlpha()
+        .negate({ alpha: true })
+        .png()
+        .toBuffer();
+}
+
 app.post('/api/v1/validate', async (req, res) => {
     try {
         const { patientImage, apiKey: providedKey } = req.body;
-        const apiKey = process.env.GEMINI_API_KEY || providedKey;
+        const apiKey = process.env.OPENAI_API_KEY || providedKey;
 
         if (!apiKey) {
             return res.status(401).json({ success: false, error: "API Key not found" });
         }
 
-        const ai = new GoogleGenAI({ apiKey });
+        const openai = new OpenAI({ apiKey });
         const { data: patientBase64, mimeType: patientMime } = getBase64Data(patientImage);
 
         const validationPrompt = "Analyze this image. Is it a human scalp, human hair, or a human head/face suitable for a hair transplant simulation? Answer ONLY with 'TRUE' if it is, or 'FALSE' if it is anything else (animals, landscapes, objects, etc).";
-        const validationResult = await ai.models.generateContent({
-            model: MODEL_NAME,
-            contents: [{
-                parts: [
-                    { text: validationPrompt },
-                    { inlineData: { data: patientBase64, mimeType: patientMime } }
-                ]
-            }],
-            config: {
-                temperature: 0.1,
-                topP: 0.9
-            }
+        
+        const response = await openai.chat.completions.create({
+            model: OPENAI_QC_MODEL,
+            messages: [
+                {
+                    role: "user",
+                    content: [
+                        { type: "text", text: validationPrompt },
+                        {
+                            type: "image_url",
+                            image_url: {
+                                url: `data:${patientMime};base64,${patientBase64}`
+                            }
+                        }
+                    ]
+                }
+            ],
+            temperature: 0.1
         });
 
-        let validationText = "";
-        if (validationResult.candidates?.[0]?.content?.parts) {
-            for (const part of validationResult.candidates[0].content.parts) {
-                if ('text' in part) validationText += part.text;
-            }
-        }
+        const validationText = response.choices[0]?.message?.content || "";
 
         if (validationText.toUpperCase().includes("FALSE")) {
             return res.json({
@@ -296,36 +396,39 @@ app.post('/api/v1/simulate', async (req, res) => {
         const { patientImage, mask, density, apiKey: providedKey } = req.body;
 
         // Use server-side API key if available, otherwise use from request
-        const apiKey = process.env.GEMINI_API_KEY || providedKey;
+        const apiKey = process.env.OPENAI_API_KEY || providedKey;
 
         if (!apiKey) {
             return res.status(401).json({ success: false, error: "API Key not found" });
         }
 
-        const ai = new GoogleGenAI({ apiKey });
+        const openai = new OpenAI({ apiKey });
         const { data: patientBase64, mimeType: patientMime } = getBase64Data(patientImage);
 
         // --- 1. ANATOMICAL VALIDATION ---
         const validationPrompt = "Analyze this image. Is it a human scalp, human hair, or a human head/face suitable for a hair transplant simulation? Answer ONLY with 'TRUE' if it is, or 'FALSE' if it is anything else (animals, landscapes, objects, etc).";
         let isValidScalp = true;
         try {
-            const validationResult = await ai.models.generateContent({
-                model: MODEL_FALLBACK_CHAIN[0],
-                contents: [{
-                    parts: [
-                        { text: validationPrompt },
-                        { inlineData: { data: patientBase64, mimeType: patientMime } }
-                    ]
-                }]
+            const response = await openai.chat.completions.create({
+                model: OPENAI_QC_MODEL,
+                messages: [
+                    {
+                        role: "user",
+                        content: [
+                            { type: "text", text: validationPrompt },
+                            {
+                                type: "image_url",
+                                image_url: {
+                                    url: `data:${patientMime};base64,${patientBase64}`
+                                }
+                            }
+                        ]
+                    }
+                ],
+                temperature: 0.1
             });
 
-            let validationText = "";
-            if (validationResult.candidates?.[0]?.content?.parts) {
-                for (const part of validationResult.candidates[0].content.parts) {
-                    if ('text' in part) validationText += part.text;
-                }
-            }
-
+            const validationText = response.choices[0]?.message?.content || "";
             if (validationText.toUpperCase().includes("FALSE")) {
                 isValidScalp = false;
             }
@@ -340,195 +443,144 @@ app.post('/api/v1/simulate', async (req, res) => {
             });
         }
 
-        // --- 2. PREPARE AI INPUT (Adding the Highlight Mask) ---
-        let inputImageBase64 = patientBase64;
-        let inputMime = patientMime;
+        // --- 2. PREPARE AI INPUTS (Padding to 1024x1024 Square & Mask Inversion) ---
+        const patBuffer = Buffer.from(patientBase64, 'base64');
+        const paddedPat = await padToSquare(patBuffer);
 
-        if (mask) {
-            const { data: maskData } = getBase64Data(mask);
-            const patBuffer = Buffer.from(patientBase64, 'base64');
-            const maskBuffer = Buffer.from(maskData, 'base64');
-
-            const metadata = await sharp(patBuffer).metadata();
-
-            const highlightLayer = await sharp({
-                create: {
-                    width: metadata.width!,
-                    height: metadata.height!,
-                    channels: 4,
-                    background: { r: 0, g: 255, b: 0, alpha: 0.45 }
-                }
-            }).png().toBuffer();
-
-            const greenMask = await sharp(highlightLayer)
-                .composite([{ input: maskBuffer, blend: 'dest-in' }])
-                .toBuffer();
-
-            const aiInputBuffer = await sharp(patBuffer)
-                .composite([{ input: greenMask, top: 0, left: 0 }])
-                .toBuffer();
-
-            inputImageBase64 = aiInputBuffer.toString('base64');
-            inputMime = 'image/png';
+        if (!mask) {
+            return res.status(400).json({
+                success: false,
+                error: "Please select/draw the transplant recipient zone first."
+            });
         }
+
+        const { data: maskData } = getBase64Data(mask);
+        const maskBuffer = Buffer.from(maskData, 'base64');
+        
+        // Convert red painted mask to OpenAI transparent mask, padded to square
+        const openaiMaskBuffer = await prepareOpenAiMask(
+            maskBuffer,
+            paddedPat.originalWidth,
+            paddedPat.originalHeight,
+            paddedPat.padding
+        );
 
         // --- 3. RUN SIMULATION WITH MULTI-MODEL FALLBACK CHAIN ---
         const densityLabel = (density ? String(density).split(' ')[0] : "MEDIUM").toUpperCase();
 
-        const systemPrompt = `ROLE: EXPERT CLINICAL HAIR RESTORATION AI
-TASK: Perform a photorealistic, high-fidelity surgical hair transplant simulation.
+        const prompt = `Act as a world-class, board-certified hair transplant surgeon and medical illustrator. Generate a hyper-realistic, clinical-grade hair restoration simulation in the transparent recipient zone. The requested graft density is ${densityLabel}.
+Strict constraints:
+1. The restored hair must perfectly match the patient's native hair characteristics, including precise color matching, follicular angle, caliber, wave pattern, and natural light reflection.
+2. Ensure a seamless, natural transition and blending between the native hair and the newly generated hair. Avoid harsh lines or unnatural density gradients.
+3. The scalp texture and lighting must remain photorealistic. Avoid any artificial, blurred, or unnatural rendering.
+4. DO NOT alter the patient's facial features, skin tone, background, clothing, or any other anatomical characteristics. Only modify the targeted transparent recipient zone.`;
 
-INSTRUCTIONS:
-1. RECIPIENT ZONE TARGET (CRITICAL): The semi-transparent neon green highlight marks the EXACT recipient zone where the transplant is planned. You must draw new, naturally growing hair over this entire green area. Do NOT leave any green highlight visible. Every highlighted pixel must be replaced/covered by realistic, natural-looking hair.
-2. HAIR COLOR & HIGHLIGHT MATCHING (CRITICAL):
-   - The color of the generated hair MUST EXACTLY match the patient's native hair color.
-   - Distinguish between natural light reflections (gloss/sheen from overhead lights) and actual gray/white hair. The patient has dark/black hair; do NOT generate gray, white, or silver hair strands unless the patient's hair is already predominantly gray. Keep the hair solid black/dark.
-3. NATIVE HAIR CLONING:
-   - Visually extract, clone, and synthesize the texture, wave/curl pattern, and flow direction of the healthy hair from the donor zone (the sides and back of the patient's head).
-   - Use this cloned texture to fill the green area.
-   - IMPORTANT: Do NOT clone the thinning, balding, or sparse properties of the patient's top scalp. The new hair must be healthy, thick, robust, and fully formed.
-4. DENSITY TARGET (${densityLabel}): 
-   - LOW: Conservative hair density (30-35 grafts/cm²). The scalp is partially visible under the new hair.
-   - MEDIUM: Standard clinical density (45-50 grafts/cm²). Full, natural-looking hair coverage with minimal scalp visibility under bright light. Healthy and natural volume.
-   - HIGH: Maximum density hair restoration (60+ grafts/cm²). Generate extremely thick, dense, and voluminous hair. The scalp must be completely covered and 100% hidden under a lush layer of dense hair. Absolutely no thinning or bald spots must remain.
-5. NATURAL HAIRLINE & BLENDING:
-   - Create a natural, irregular, micro-jagged frontal hairline with individual follicular units at the edge (no straight, blocky, or artificial-looking hairpiece lines).
-   - Feather and taper the new hair flawlessly into the patient's surrounding native hair so there is no visible seam or transition boundary.
-
-CRITICAL CONSTRAINTS:
-- NO REDUCTION OF DENSITY / NO BALDNESS CREATION: Under no circumstances should you make the patient look balder than they are. If the patient has existing native hair inside the highlighted area, you must only ADD more hair to make it look thicker and fuller. Do NOT erase existing hair or create empty/bald patches.
-- NO GREEN ALLOWED: Every green highlighted pixel must be completely replaced by realistic hair. No green tint, outline, or halo may remain.
-- The final output must be a seamless, high-resolution, photorealistic clinical simulation.`;
-
-        const qcPrompt = `Compare the Original Patient Photo with the AI Generated Simulation Result.
-Determine the decision ("PASS" or "FAIL") based on the following rules:
-
-Answer "FAIL" if any of the following are true:
-1) The patient looks balder, has less hair, or has a new bald spot in the simulation compared to their original photo (the output must have more or equal hair density, never less).
-2) There is any visible green tint, green highlight, or green pixels remaining on the scalp.
-3) No new hair was generated in the target area (meaning the output is completely identical or unchanged compared to the original photo). Note: if the patient already has hair, look closely to see if it has been filled in, made thicker, or has increased density. Do not fail if the hair was successfully made thicker/denser.
-4) The generated hair looks completely fake (like a solid black block, cartoon lines, or a literal wig pasted on).
-
-Otherwise, answer "PASS" if the simulation successfully added hair or increased density, and looks natural.
-
-You MUST respond ONLY with a raw JSON object containing these two fields:
-{
-  "decision": "PASS" or "FAIL",
-  "reason": "a detailed explanation of the decision"
-}
-Do not output any markdown code blocks, backticks, or other text outside the JSON.`;
+        const qcPrompt = `Compare Original Photo vs Simulation Result. Return ONLY raw JSON: {"decision":"PASS"|"FAIL"}
+FAIL if:
+1) Patient looks balder/has less hair (density must be >= original).
+2) Any green tint/highlight is visible.
+3) No new hair added (unchanged).
+4) Result looks cartoonish, fake, or artificial.
+Otherwise PASS. No markdown blocks.`;
 
         let finalAiResultB64 = "";
-        let finalAiMime = "";
+        let finalAiMime = "image/png";
         let lastModelError: any = null;
 
-        for (const currentModel of MODEL_FALLBACK_CHAIN) {
-            console.log(`[SIMULATION ENGINE] Attempting simulation with model: ${currentModel}`);
+        for (const currentModel of OPENAI_MODEL_FALLBACK_CHAIN) {
+            console.log(`[SIMULATION ENGINE] Attempting simulation with OpenAI model: ${currentModel}`);
             try {
-                const response = await ai.models.generateContent({
+                const imageFile = await OpenAI.toFile(paddedPat.buffer, 'image.png', { type: 'image/png' });
+                const maskFile = await OpenAI.toFile(openaiMaskBuffer, 'mask.png', { type: 'image/png' });
+
+                const editResponse = await openai.images.edit({
                     model: currentModel,
-                    contents: [
-                        {
-                            parts: [
-                                { text: "Here is the input image showing the patient with a semi-transparent green mask overlay marking the target recipient zone where you must draw the new hair:" },
-                                {
-                                    inlineData: {
-                                        data: inputImageBase64,
-                                        mimeType: inputMime
-                                    }
-                                }
-                            ]
-                        }
-                    ],
-                    config: {
-                        systemInstruction: {
-                            parts: [{ text: systemPrompt }]
-                        },
-                        temperature: 0.2,
-                        topP: 0.85
-                    }
+                    image: imageFile,
+                    mask: maskFile,
+                    prompt: prompt,
+                    n: 1,
+                    size: "1024x1024"
                 });
 
-                let aiResultB64 = "";
-                let aiMime = "";
-                if (response.candidates?.[0]?.content?.parts) {
-                    for (const part of response.candidates[0].content.parts) {
-                        if (part.inlineData) {
-                            aiResultB64 = part.inlineData.data;
-                            aiMime = part.inlineData.mimeType;
-                            break;
-                        }
-                    }
-                }
+                const resultData = editResponse.data[0];
+                const generatedB64 = resultData?.b64_json;
+                const generatedUrl = resultData?.url;
 
-                if (!aiResultB64) {
-                    console.warn(`[FALLBACK ENGINE] Model ${currentModel} returned empty image data. Retrying with next model...`);
+                if (!generatedB64 && !generatedUrl) {
+                    console.warn(`[FALLBACK ENGINE] Model ${currentModel} returned empty image data. Keys: ${JSON.stringify(Object.keys(resultData || {}))}. Retrying with next model...`);
                     continue;
                 }
 
-                // --- QA CHECK FOR CURRENT MODEL ---
-                console.log(`[QA CHECK] Running comparison QA check with model: ${currentModel}...`);
-                const qcResult = await ai.models.generateContent({
-                    model: currentModel,
-                    contents: [{
-                        parts: [
-                            { text: "Original Patient Photo:" },
-                            { inlineData: { data: patientBase64, mimeType: patientMime } },
-                            { text: "AI Generated Simulation Result:" },
-                            { inlineData: { data: aiResultB64, mimeType: aiMime } },
-                            { text: qcPrompt }
-                        ]
-                    }],
-                    config: {
-                        temperature: 0.1,
-                        topP: 0.9
+                let aiResultB64: string;
+                if (generatedB64) {
+                    // Direct base64 response (default for gpt-image models)
+                    aiResultB64 = generatedB64;
+                    console.log(`[SIMULATION ENGINE] Received b64_json response from ${currentModel} (${generatedB64.length} chars)`);
+                } else {
+                    // URL-based response — fetch the image
+                    const imgFetch = await fetch(generatedUrl!);
+                    if (!imgFetch.ok) {
+                        console.warn(`[FALLBACK ENGINE] Failed to fetch generated image from URL: ${generatedUrl}`);
+                        continue;
                     }
+                    const imgBuffer = Buffer.from(await imgFetch.arrayBuffer());
+                    aiResultB64 = imgBuffer.toString('base64');
+                    console.log(`[SIMULATION ENGINE] Fetched URL response from ${currentModel} (${aiResultB64.length} chars)`);
+                }
+
+                // --- QA CHECK FOR CURRENT MODEL ---
+                console.log(`[QA CHECK] Running comparison QA check with OpenAI Vision (gpt-4o-mini)...`);
+                const qcResponse = await openai.chat.completions.create({
+                    model: OPENAI_QC_MODEL,
+                    messages: [
+                        {
+                            role: "user",
+                            content: [
+                                { type: "text", text: "Original Patient Photo:" },
+                                {
+                                    type: "image_url",
+                                    image_url: {
+                                        url: `data:image/png;base64,${paddedPat.buffer.toString('base64')}`
+                                    }
+                                },
+                                { type: "text", text: "AI Generated Simulation Result:" },
+                                {
+                                    type: "image_url",
+                                    image_url: {
+                                        url: `data:image/png;base64,${aiResultB64}`
+                                    }
+                                },
+                                { type: "text", text: qcPrompt }
+                            ]
+                        }
+                    ],
+                    response_format: { type: "json_object" },
+                    temperature: 0.1
                 });
 
                 let qcDecision = "FAIL";
                 let qcReason = "No response from QA model";
 
                 try {
-                    let qcText = "";
-                    if (qcResult.candidates?.[0]?.content?.parts) {
-                        for (const part of qcResult.candidates[0].content.parts) {
-                            if ('text' in part) qcText += part.text;
-                        }
-                    }
-                    
-                    let cleanedText = qcText.trim();
-                    if (cleanedText.startsWith("```")) {
-                        cleanedText = cleanedText.replace(/^```[a-zA-Z]*\n?/, "").replace(/\n?```$/, "").trim();
-                    }
-                    
-                    const parsed = JSON.parse(cleanedText);
+                    const qcText = qcResponse.choices[0]?.message?.content || "";
+                    const parsed = JSON.parse(qcText.trim());
                     qcDecision = parsed.decision?.toUpperCase() || "FAIL";
                     qcReason = parsed.reason || "No reason provided";
                     console.log(`[QA CHECK] Decision: ${qcDecision}, Reason: ${qcReason}`);
                 } catch (e: any) {
                     console.error("[QA CHECK] Failed to parse JSON response:", e);
-                    const upperText = qcResult.candidates?.[0]?.content?.parts?.[0] && 'text' in qcResult.candidates[0].content.parts[0]
-                        ? String(qcResult.candidates[0].content.parts[0].text).toUpperCase()
-                        : "";
-                    if (upperText.includes("PASS") && !upperText.includes("FAIL")) {
-                        qcDecision = "PASS";
-                        qcReason = "Fallback parser detected PASS";
-                    } else {
-                        qcDecision = "FAIL";
-                        qcReason = "Fallback parser: AI response was not valid JSON";
-                    }
+                    qcDecision = "FAIL";
+                    qcReason = "Failed to parse JSON response from QC model.";
                 }
 
                 if (qcDecision === "PASS") {
                     console.log(`[SIMULATION ENGINE] Successful generation and QA PASS using model: ${currentModel}`);
                     finalAiResultB64 = aiResultB64;
-                    finalAiMime = aiMime;
                     break;
                 } else {
-                    console.warn(`[FALLBACK ENGINE] QA rejected model ${currentModel} (Reason: ${qcReason}). Trying next model in fallback chain...`);
+                    console.warn(`[FALLBACK ENGINE] QA rejected model ${currentModel} (Reason: ${qcReason}). Trying next model...`);
                     if (!finalAiResultB64) {
                         finalAiResultB64 = aiResultB64;
-                        finalAiMime = aiMime;
                     }
                 }
 
@@ -543,17 +595,22 @@ Do not output any markdown code blocks, backticks, or other text outside the JSO
             return res.status(500).json({ success: false, error: sanitizedMsg });
         }
 
-        // --- 5. FINAL COMPOSITION ---
-        let finalImageBase64 = finalAiResultB64;
-        if (mask) {
-            const finalBuffer = await compositeStrictResultServer(
-                Buffer.from(patientBase64, 'base64'),
-                Buffer.from(finalAiResultB64, 'base64'),
-                Buffer.from(getBase64Data(mask).data, 'base64')
-            );
-            finalImageBase64 = finalBuffer.toString('base64');
-            finalAiMime = 'image/png';
-        }
+        // --- 4. CROP & COMPOSITE RESULT ---
+        // Crop the 1024x1024 square AI result back to original aspect ratio
+        const croppedAiBuffer = await cropToOriginal(
+            Buffer.from(finalAiResultB64, 'base64'),
+            paddedPat.originalWidth,
+            paddedPat.originalHeight,
+            paddedPat.padding
+        );
+
+        // Blend it strictly onto original photo using original mask
+        const finalBuffer = await compositeStrictResultServer(
+            patBuffer,
+            croppedAiBuffer,
+            maskBuffer
+        );
+        const finalImageBase64 = finalBuffer.toString('base64');
 
         res.json({
             success: true,

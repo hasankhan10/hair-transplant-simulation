@@ -1,7 +1,4 @@
-import { GoogleGenAI } from "@google/genai";
 import { VisualizationParams, GraftDensity } from "../types";
-
-const MODEL_NAME = 'gemini-2.5-flash-image';
 
 /**
  * Strips the data:image prefix to get just the base64 data
