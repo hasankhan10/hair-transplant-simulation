@@ -1,3 +1,7 @@
+import { File } from 'node:buffer';
+if (!globalThis.File) {
+    (globalThis as any).File = File;
+}
 
 import express from 'express';
 import cors from 'cors';
