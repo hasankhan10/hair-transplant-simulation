@@ -31,8 +31,8 @@ app.use(express.json({ limit: '50mb' }));
 app.use(cors());
 
 const OPENAI_MODEL_FALLBACK_CHAIN = [
-    'gpt-image-1.5',
-    'gpt-image-2'
+    'gpt-image-2',
+    'gpt-image-1.5'
 ];
 const OPENAI_QC_MODEL = 'gpt-4o-mini';
 
@@ -474,18 +474,20 @@ app.post('/api/v1/simulate', async (req, res) => {
 
         const prompt = `Act as a world-class, board-certified hair transplant surgeon and medical illustrator. Generate a hyper-realistic, clinical-grade hair restoration simulation in the transparent recipient zone. The requested graft density is ${densityLabel}.
 Strict constraints:
-1. The restored hair must perfectly match the patient's native hair characteristics, including precise color matching, follicular angle, caliber, wave pattern, and natural light reflection.
-2. Ensure a seamless, natural transition and blending between the native hair and the newly generated hair. Avoid harsh lines or unnatural density gradients.
-3. The hair MUST look organically grown directly from the scalp follicles. Do NOT make the hair look pasted on, painted on, or like a detached wig sitting on top of the head. Ensure the hair roots integrate naturally into the scalp skin.
-4. The scalp texture and lighting must remain photorealistic. Avoid any artificial, blurred, or unnatural rendering.
-5. DO NOT alter the patient's facial features, skin tone, background, clothing, or any other anatomical characteristics. Only modify the targeted transparent recipient zone.`;
+1. DO NOT paint a solid block of skin or alter the underlying skin tone. You must draw individual, realistic hair strands directly over the patient's existing skin.
+2. The restored hair must perfectly match the patient's native hair characteristics, including precise color matching, follicular angle, caliber, wave pattern, and natural light reflection.
+3. Ensure a seamless, natural transition and blending between the native hair and the newly generated hair. Avoid harsh lines or unnatural density gradients.
+4. The hair MUST look organically grown directly from the scalp follicles. Do NOT make the hair look pasted on, painted on, or like a detached wig sitting on top of the head.
+5. The scalp texture and lighting must remain photorealistic. Avoid any artificial, blurred, or unnatural rendering.
+6. DO NOT alter the patient's facial features, background, clothing, or any other anatomical characteristics. Only modify the targeted transparent recipient zone.`;
 
-        const qcPrompt = `Compare Original Photo vs Simulation Result. Return ONLY raw JSON: {"decision":"PASS"|"FAIL"}
+        const qcPrompt = `Compare Original Photo vs Simulation Result. Return ONLY raw JSON: {"decision":"PASS"|"FAIL","reason":"..."}
 FAIL if:
 1) Patient looks balder/has less hair (density must be >= original).
 2) Any green tint/highlight is visible.
 3) No new hair added (unchanged).
-4) Result looks cartoonish, fake, or artificial.
+4) Result looks cartoonish, fake, or like a pasted-on wig.
+5) The underlying skin tone in the new hair area does not match the rest of the forehead, or looks like a blurred/artificial patch.
 Otherwise PASS. No markdown blocks.`;
 
         let finalAiResultB64 = "";
