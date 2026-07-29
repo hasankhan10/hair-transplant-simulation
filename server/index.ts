@@ -11,6 +11,16 @@ import { fileURLToPath } from 'url';
 import sharp from 'sharp';
 import OpenAI from 'openai';
 
+import { sanitizeErrorMessage } from './utils/errorUtils';
+import {
+    getBase64Data,
+    compositeStrictResultServer,
+    padToSquare,
+    cropToOriginal,
+    prepareOpenAiMask,
+    PaddingInfo
+} from './utils/imageUtils';
+
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
@@ -36,171 +46,6 @@ const OPENAI_MODEL_FALLBACK_CHAIN = [
     'gpt-image-2'
 ];
 const OPENAI_QC_MODEL = 'gpt-4o-mini';
-
-/**
- * Sanitizes internal server / openai API errors into warm, reassuring clinical messages.
- * Ensures raw JSON, stack traces, and 500 status strings are NEVER exposed to the client.
- */
-function sanitizeErrorMessage(error: any): string {
-    const rawMessage = typeof error === 'string' ? error : (error?.message || String(error));
-    console.error("[SERVER INTERNAL ERROR LOG]:", rawMessage);
-
-    let lower = rawMessage.toLowerCase();
-
-    // Handle stringified JSON errors (e.g. {"error":{"code":500...}})
-    if (rawMessage.trim().startsWith('{')) {
-        try {
-            const parsed = JSON.parse(rawMessage);
-            const nested = parsed.error?.message || parsed.message || parsed.error;
-            if (typeof nested === 'string') lower = nested.toLowerCase();
-        } catch (e) {
-            // Keep original lower string
-        }
-    }
-
-    if (lower.includes('scalp') || lower.includes('photo') || lower.includes('clear')) {
-        return "Please upload a clear photo of your scalp/head for simulation, not any other type of image.";
-    }
-
-    return "Our AI simulation engine is currently experiencing high demand. Please click 'Generate Simulation' again in a moment for your high-density preview.";
-}
-
-/**
- * Strips the data:image prefix to get just the base64 data
- */
-const getBase64Data = (dataUrl: string): { data: string; mimeType: string } => {
-    const [header, data] = dataUrl.split(',');
-    const mimeType = header.match(/:(.*?);/)?.[1] || 'image/png';
-    return { data, mimeType };
-};
-
-
-
-/**
- * Server-side image composition using Sharp
- */
-async function compositeStrictResultServer(
-    originalBuffer: Buffer,
-    aiResultBuffer: Buffer,
-    maskBuffer: Buffer
-): Promise<Buffer> {
-    const originalMetadata = await sharp(originalBuffer).metadata();
-
-    // 1. Create a feathered mask (8px blur like in the browser)
-    const featheredMask = await sharp(maskBuffer)
-        .resize(originalMetadata.width, originalMetadata.height)
-        .blur(8)
-        .toBuffer();
-
-    // 2. Extract the AI result through the feathered mask
-    const aiWithAlpha = await sharp(aiResultBuffer)
-        .resize(originalMetadata.width, originalMetadata.height)
-        .composite([{ input: featheredMask, blend: 'dest-in' }])
-        .png()
-        .toBuffer();
-
-    // 3. Composite onto the original
-    return sharp(originalBuffer)
-        .composite([{ input: aiWithAlpha, top: 0, left: 0 }])
-        .toBuffer();
-}
-
-interface PaddingInfo {
-    top: number;
-    left: number;
-    bottom: number;
-    right: number;
-}
-
-/**
- * Pads an image to make it square, keeping it centered.
- */
-async function padToSquare(inputBuffer: Buffer): Promise<{
-    buffer: Buffer;
-    originalWidth: number;
-    originalHeight: number;
-    padding: PaddingInfo;
-}> {
-    const metadata = await sharp(inputBuffer).metadata();
-    const w = metadata.width!;
-    const h = metadata.height!;
-    const size = Math.max(w, h);
-
-    const left = Math.floor((size - w) / 2);
-    const top = Math.floor((size - h) / 2);
-    const right = size - w - left;
-    const bottom = size - h - top;
-
-    const squareBuffer = await sharp(inputBuffer)
-        .extend({
-            top,
-            left,
-            bottom,
-            right,
-            background: { r: 0, g: 0, b: 0, alpha: 1 }
-        })
-        .resize(1024, 1024)
-        .png()
-        .toBuffer();
-
-    return {
-        buffer: squareBuffer,
-        originalWidth: w,
-        originalHeight: h,
-        padding: { top, left, bottom, right }
-    };
-}
-
-/**
- * Crops a square padded image back to its original aspect ratio.
- */
-async function cropToOriginal(
-    squareBuffer: Buffer,
-    originalWidth: number,
-    originalHeight: number,
-    padding: PaddingInfo
-): Promise<Buffer> {
-    const size = Math.max(originalWidth, originalHeight);
-
-    return sharp(squareBuffer)
-        .resize(size, size)
-        .extract({
-            left: padding.left,
-            top: padding.top,
-            width: originalWidth,
-            height: originalHeight
-        })
-        .png()
-        .toBuffer();
-}
-
-/**
- * Converts a grayscale/red opaque mask (where painted region has alpha>0, unpainted has alpha=0)
- * into an OpenAI-compatible mask (where painted region has alpha=0, unpainted has alpha=255).
- * Pads it to square to match the padded patient photo.
- */
-async function prepareOpenAiMask(
-    maskBuffer: Buffer,
-    originalWidth: number,
-    originalHeight: number,
-    padding: PaddingInfo
-): Promise<Buffer> {
-    // 1. Pad the user's mask to square matching the patient's aspect ratio extension
-    // 2. Negate the color and the alpha channel (so painted transparent becomes opaque, and painted opaque becomes transparent)
-    return sharp(maskBuffer)
-        .extend({
-            top: padding.top,
-            left: padding.left,
-            bottom: padding.bottom,
-            right: padding.right,
-            background: { r: 0, g: 0, b: 0, alpha: 0 } // pad with transparent
-        })
-        .resize(1024, 1024, { fit: 'fill' })
-        .ensureAlpha()
-        .negate({ alpha: true })
-        .png()
-        .toBuffer();
-}
 
 app.post('/api/v1/validate', async (req, res) => {
     try {
