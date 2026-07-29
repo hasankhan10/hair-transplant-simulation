@@ -32,12 +32,13 @@ app.use(cors());
 
 const OPENAI_MODEL_FALLBACK_CHAIN = [
     'gpt-image-2',
-    'gpt-image-1.5'
+    'gpt-image-1.5',
+    'gpt-image-2'
 ];
 const OPENAI_QC_MODEL = 'gpt-4o-mini';
 
 /**
- * Sanitizes internal server / Gemini API errors into warm, reassuring clinical messages.
+ * Sanitizes internal server / openai API errors into warm, reassuring clinical messages.
  * Ensures raw JSON, stack traces, and 500 status strings are NEVER exposed to the client.
  */
 function sanitizeErrorMessage(error: any): string {
@@ -160,15 +161,12 @@ async function cropToOriginal(
     padding: PaddingInfo
 ): Promise<Buffer> {
     const size = Math.max(originalWidth, originalHeight);
-    const scale = size / 1024;
-    const cropLeft = Math.round(padding.left / scale);
-    const cropTop = Math.round(padding.top / scale);
 
     return sharp(squareBuffer)
         .resize(size, size)
         .extract({
-            left: cropLeft,
-            top: cropTop,
+            left: padding.left,
+            top: padding.top,
             width: originalWidth,
             height: originalHeight
         })
@@ -409,9 +407,18 @@ app.post('/api/v1/simulate', async (req, res) => {
         const openai = new OpenAI({ apiKey });
         const { data: patientBase64, mimeType: patientMime } = getBase64Data(patientImage);
 
-        // --- 1. ANATOMICAL VALIDATION ---
-        const validationPrompt = "Analyze this image. Is it a human scalp, human hair, or a human head/face suitable for a hair transplant simulation? Answer ONLY with 'TRUE' if it is, or 'FALSE' if it is anything else (animals, landscapes, objects, etc).";
+        // --- 1. ANATOMICAL VALIDATION & HAIR CHARACTERISTICS ANALYSIS ---
+        const validationPrompt = `Analyze this patient photo. Return a JSON object with these fields:
+1. "isValid": true if the photo is a human scalp, human hair, or a human head/face suitable for a hair transplant simulation; false otherwise.
+2. "hairColor": The patient's native hair color (e.g., "black", "dark brown", "light brown", "blonde", "grey", "red").
+3. "hairTexture": The patient's native hair texture (e.g., "straight", "wavy", "curly", "coily").
+4. "hairCaliber": The patient's native hair caliber/thickness (e.g., "fine", "medium", "coarse").`;
+
         let isValidScalp = true;
+        let hairColor = "matching";
+        let hairTexture = "natural";
+        let hairCaliber = "coarse";
+
         try {
             const response = await openai.chat.completions.create({
                 model: OPENAI_QC_MODEL,
@@ -429,15 +436,20 @@ app.post('/api/v1/simulate', async (req, res) => {
                         ]
                     }
                 ],
+                response_format: { type: "json_object" },
                 temperature: 0.1
             });
 
             const validationText = response.choices[0]?.message?.content || "";
-            if (validationText.toUpperCase().includes("FALSE")) {
-                isValidScalp = false;
-            }
+            const parsed = JSON.parse(validationText);
+            isValidScalp = parsed.isValid !== false;
+            if (parsed.hairColor) hairColor = parsed.hairColor.toLowerCase();
+            if (parsed.hairTexture) hairTexture = parsed.hairTexture.toLowerCase();
+            if (parsed.hairCaliber) hairCaliber = parsed.hairCaliber.toLowerCase();
+            
+            console.log(`[HAIR ANALYSIS] Color: ${hairColor}, Texture: ${hairTexture}, Caliber: ${hairCaliber}`);
         } catch (e) {
-            console.warn("[VALIDATION WARNING] Primary model validation skipped due to API load, proceeding to simulation fallback chain.");
+            console.warn("[VALIDATION WARNING] Primary model validation/analysis skipped due to API load, proceeding with generic fallback.");
         }
 
         if (!isValidScalp) {
@@ -448,7 +460,10 @@ app.post('/api/v1/simulate', async (req, res) => {
         }
 
         // --- 2. PREPARE AI INPUTS (Padding to 1024x1024 Square & Mask Inversion) ---
-        const patBuffer = Buffer.from(patientBase64, 'base64');
+        // Pre-process the patient image to bake in any EXIF rotation (critical for mobile uploads)
+        const rawPatBuffer = Buffer.from(patientBase64, 'base64');
+        const patBuffer = await sharp(rawPatBuffer).rotate().toBuffer();
+        
         const paddedPat = await padToSquare(patBuffer);
 
         if (!mask) {
@@ -472,14 +487,7 @@ app.post('/api/v1/simulate', async (req, res) => {
         // --- 3. RUN SIMULATION WITH MULTI-MODEL FALLBACK CHAIN ---
         const densityLabel = (density ? String(density).split(' ')[0] : "MEDIUM").toUpperCase();
 
-        const prompt = `Act as a world-class, board-certified hair transplant surgeon and medical illustrator. Generate a hyper-realistic, clinical-grade hair restoration simulation in the transparent recipient zone. The requested graft density is ${densityLabel}.
-Strict constraints:
-1. DO NOT paint a solid block of skin or alter the underlying skin tone. You must draw individual, realistic hair strands directly over the patient's existing skin.
-2. The restored hair must perfectly match the patient's native hair characteristics, including precise color matching, follicular angle, caliber, wave pattern, and natural light reflection.
-3. Ensure a seamless, natural transition and blending between the native hair and the newly generated hair. Avoid harsh lines or unnatural density gradients.
-4. The hair MUST look organically grown directly from the scalp follicles. Do NOT make the hair look pasted on, painted on, or like a detached wig sitting on top of the head.
-5. The scalp texture and lighting must remain photorealistic. Avoid any artificial, blurred, or unnatural rendering.
-6. DO NOT alter the patient's facial features, background, clothing, or any other anatomical characteristics. Only modify the targeted transparent recipient zone.`;
+        const prompt = `A high-quality clinical photograph of a patient with successful hair restoration. Thick, natural, realistic ${hairColor}, ${hairTexture}, ${hairCaliber} hair has been seamlessly filled in with ${densityLabel} density. The new hair strands perfectly match the patient's original hair color, texture, natural wave, and growth direction, blending invisibly with the surrounding native hair. The hairline is soft and irregular, replicating natural human growth. The underlying scalp skin and forehead remain completely natural, sharp, and untouched, with realistic skin pores and zero artificial blurring or styling artifacts. Photorealistic, 8k resolution, shot on professional clinical camera.`;
 
         const qcPrompt = `Compare Original Photo vs Simulation Result. Return ONLY raw JSON: {"decision":"PASS"|"FAIL","reason":"..."}
 FAIL if:
@@ -586,9 +594,6 @@ Otherwise PASS. No markdown blocks.`;
                     break;
                 } else {
                     console.warn(`[FALLBACK ENGINE] QA rejected model ${currentModel} (Reason: ${qcReason}). Trying next model...`);
-                    if (!finalAiResultB64) {
-                        finalAiResultB64 = aiResultB64;
-                    }
                 }
 
             } catch (modelErr: any) {
@@ -598,8 +603,7 @@ Otherwise PASS. No markdown blocks.`;
         }
 
         if (!finalAiResultB64) {
-            const sanitizedMsg = sanitizeErrorMessage(lastModelError || "All simulation models are currently busy.");
-            return res.status(500).json({ success: false, error: sanitizedMsg });
+            return res.status(500).json({ success: false, error: "The AI could not generate a realistic outcome. Please generate again." });
         }
 
         // --- 4. CROP & COMPOSITE RESULT ---
